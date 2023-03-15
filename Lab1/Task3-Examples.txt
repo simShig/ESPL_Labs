@@ -1,0 +1,124 @@
+#> menu_map
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+Option : 0
+
+Within bounds
+Hey!
+DONE.
+
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+Option : 1
+
+Within bounds
+H
+e
+y
+!
+.
+DONE
+
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+Option : 2
+
+Within bounds
+48
+65
+79
+21
+.
+DONE.
+
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+
+Option : 3
+Within bounds
+DONE.
+
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+Option : 1
+
+Within bounds
+K
+h
+|
+1
+.
+DONE.
+
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+Option : 2
+
+Within bounds
+4B
+68
+7C
+31
+.
+DONE.
+
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+Option : 4
+Within bounds
+DONE.
+
+Please choose a function:
+0)  Get string
+1)  Print string
+2)  Print hex
+3)  Encrypt
+4)  Decrypt
+Option : 1
+
+Within bounds
+H
+e
+y
+.
+.
+DONE.
+
+
+Within bounds
+
