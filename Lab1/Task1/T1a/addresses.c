@@ -99,9 +99,18 @@ int main(int argc, char **argv)
     
     printf("Command line arg addresses (T1e):\n");
     /* task 1 e here */
-    
+
+    printf("argc = %d\n", argc);
+    printf("&argc = %p\n", (void*)&argc);
+    printf("&argv = %p\n", (void*)&argv);
+    for (int i = 0; i < argc; i++) {
+        printf("argv[%d] = %p, %s\n", i, (void*)&argv[i], argv[i]);
+    }
+
     return 0;
 }
+
+//we can see each arg is 4 bytes and its on the stack.
 
 void point_at(void *p)
 {
