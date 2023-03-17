@@ -5,13 +5,13 @@
 /* copied from task 2 "base.c":*/
 
   char* map(char *array, int array_length, char (*f) (char)){
-  char* mapped_array = (char*)(malloc(array_length*sizeof(char)));
-   /* TODO: Complete during task 2.a */
+    char* mapped_array = (char*)(malloc(array_length*sizeof(char)));
+    /* TODO: Complete during task 2.a */
 
-  for(int i=0; i<array_length; i++) {
-    mapped_array[i] = f(array[i]);
-  }
-  return mapped_array;
+    for(int i=0; i<array_length; i++) {
+      mapped_array[i] = f(array[i]);
+    }
+    return mapped_array;
 }
 
 char my_get(char c) {
@@ -56,45 +56,56 @@ struct fun_desc {
 
 int main(int argc, char **argv){
   char* carrey = (char*)(malloc(40));
-
+  int menu_input;
   struct fun_desc menu[] = { 
-    { "get string", my_get }, 
-    { "print string", cprt }, 
-    { "print hexa", xprt }, 
-    { "encrypt", encrypt }, 
-    { "decrypt", decrypt }, 
-    { "exit", NULL }, 
+    { "Get string", my_get }, 
+    { "Print string", cprt }, 
+    { "Print hexa", xprt }, 
+    { "Encrypt", encrypt }, 
+    { "Decrypt", decrypt }, 
     { NULL, NULL }
   };
   // for (size_t i = 0; i < 5; i++){
   //   printf("%02X\n", (unsigned char)carrey[i]); //for debug
   // }
-  int bound = sizeof(menu)/8-1; //lower bound - 1,upper bound - 6
-  printf ("%i\n",bound);
-
+  int bound = sizeof(menu)/8-2; //lower bound - 1,upper bound - 6
+  // printf ("%i\n",bound);
+  int flag = 1;   //all flags to deal with double print of menu because of 0A garbage values
+  
   while (1) {
     /* print menu iteritavly:*/
-    printf("Select operation from the following menu:\n");
-    for (int i = 0; i < sizeof(menu)/8-1; i++)
-    {
-      printf( "%i. %s\n", i+1,menu[i].name);
+    if (flag !=0){
+      printf("Select operation from the following menu:\n");
+      for (int i = 0; i < sizeof(menu)/8-1; i++)
+      {
+        printf( "%i)  %s\n", i,menu[i].name);
+      }
     }
+    flag = 1; 
 
-    /* recieve user input:*/
-    int menu_input = (int)fgetc(stdin);
-    printf("%f\n \n", menu_input);
-   
-    if (menu_input==EOF) break;
-    if (menu_input>=1&&menu_input<=bound)
+    // /* recieve user input:*/
+    char input[256];
+    if (fgets(input, 256, stdin) == NULL) {
+      break; // if EOF - exit while loop
+    }
+    menu_input = input[0];
+    printf("input is:%i\n",(int)menu_input);
+    if (menu_input==10) flag = 0;   //ascii - hxa garbage 0A
+    // if (menu_input==EOF) break;
+
+    menu_input=menu_input-48;
+    if (menu_input>=0&&menu_input<=bound)
     {
       printf ("within bounds!\n");
       /* code */
-    }else printf("not within bounds!\n");
+    }else {
+      printf("not within bounds!\n");
+      break;
+    }
     
-
-//     else{
-//         printf("Invalid choice. Please enter a number between 1 and 6.\n");
-//         break;
+  /* T3b - 5:*/
+    carrey = map(carrey,5,menu[menu_input].fun);
+   
     }
 
   return 0;
