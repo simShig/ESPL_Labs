@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* copied from task 2 "base.c":*/
 
@@ -46,72 +48,56 @@ char xprt(char c) {
   return c;
 }
 
+struct fun_desc { 
+  char *name; 
+  char (*fun)(char); 
+  };
+
+
 int main(int argc, char **argv){
+  char* carrey = (char*)(malloc(40));
 
- while (1) {
+  struct fun_desc menu[] = { 
+    { "get string", my_get }, 
+    { "print string", cprt }, 
+    { "print hexa", xprt }, 
+    { "encrypt", encrypt }, 
+    { "decrypt", decrypt }, 
+    { "exit", NULL }, 
+    { NULL, NULL }
+  };
+  // for (size_t i = 0; i < 5; i++){
+  //   printf("%02X\n", (unsigned char)carrey[i]); //for debug
+  // }
+  int bound = sizeof(menu)/8-1; //lower bound - 1,upper bound - 6
+  printf ("%i\n",bound);
+
+  while (1) {
+    /* print menu iteritavly:*/
     printf("Select operation from the following menu:\n");
-    printf("1. Get String\n");
-    printf("2. Print String (crpt)\n");
-    printf("3. Print Hex (xprt)\n");
-    printf("4. Encrypt\n");
-    printf("5. Decrypt\n");
-    printf("6. Exit\n");
-    
-    
-    char input[256];
-    if (fgets(input, 256, stdin) == NULL) {
-      break; // if EOF - exit loop
+    for (int i = 0; i < sizeof(menu)/8-1; i++)
+    {
+      printf( "%i. %s\n", i+1,menu[i].name);
     }
-    int choice = atoi(input); // convert input to integer
 
-    if (input=='1'){
-        char* str = get_string();
-        printf("You entered: %s\n", str);
-        free(str);
-        break;
-    }
-    else if (input=='2'){
-        char* str = get_string();
-        char* mapped_str = map(str, strlen(str), &cprt);
-        printf("Mapped string: %s\n", mapped_str);
-        free(str);
-        free(mapped_str);
-        break;
-    }
-    else if (input=='3'){
-        char* str = get_string();
-        char* mapped_str = map(str, strlen(str), &xprt);
-        printf("Mapped string: %s\n", mapped_str);
-        free(str);
-        free(mapped_str);
-        break;
-    }
-    else if (input=='4'){
-        char* str = get_string();
-        char* mapped_str = map(str, strlen(str), &encrypt);
-        printf("Mapped string: %s\n", mapped_str);
-        free(str);
-        free(mapped_str);
-        break;
-    }
-    else if (input=='5'){
-        char* str = get_string();
-        char* mapped_str = map(str, strlen(str), &decrypt);
-        printf("Mapped string: %s\n", mapped_str);
-        free(str);
-        free(mapped_str);
-        break;
-    }
-    else if (input=='6'){
-        printf("Exiting program.\n");
-        return 0;
-    }
-    else{
-        printf("Invalid choice. Please enter a number between 1 and 6.\n");
-        break;
+    /* recieve user input:*/
+    int menu_input = (int)fgetc(stdin);
+    printf("%f\n \n", menu_input);
+   
+    if (menu_input==EOF) break;
+    if (menu_input>=1&&menu_input<=bound)
+    {
+      printf ("within bounds!\n");
+      /* code */
+    }else printf("not within bounds!\n");
+    
+
+//     else{
+//         printf("Invalid choice. Please enter a number between 1 and 6.\n");
+//         break;
     }
 
   return 0;
-}
+
 }
 
