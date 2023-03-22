@@ -64,10 +64,10 @@ int main(int argc, char **argv)
     float farray[3];
     double darray[3];
     char carray[3]; 
-    printf("- &iarrey:   %p\n- &iarray+1: %p\n- dist: %ld\n \n", &iarray, &iarray+1,(size_t)&iarray - (size_t)(&iarray+1));
-    printf("- &farrey:   %p\n- &farray+1: %p\n- dist: %ld\n \n", &farray, &farray+1,(size_t)&farray - (size_t)(&farray+1));
-    printf("- &darrey:   %p\n- &darray+1: %p\n- dist: %ld\n \n", &darray, &darray+1,(size_t)&darray - (size_t)(&darray+1));
-    printf("- &carrey:   %p\n- &carray+1: %p\n- dist: %ld\n \n", &carray, &carray+1,(size_t)&carray - (size_t)(&carray+1));
+    printf("- &iarrey:   %p\n- &iarray+1: %p\n- dist: %d\n \n", &iarray, &iarray+1,(size_t)&iarray - (size_t)(&iarray+1));
+    printf("- &farrey:   %p\n- &farray+1: %p\n- dist: %d\n \n", &farray, &farray+1,(size_t)&farray - (size_t)(&farray+1));
+    printf("- &darrey:   %p\n- &darray+1: %p\n- dist: %d\n \n", &darray, &darray+1,(size_t)&darray - (size_t)(&darray+1));
+    printf("- &carrey:   %p\n- &carray+1: %p\n- dist: %d\n \n", &carray, &carray+1,(size_t)&carray - (size_t)(&carray+1));
 //conclusion:
     printf("we can notice that the +1 moves to next \"free\" cell (after the arrey) neither to the next cell\n \n");
 
@@ -138,7 +138,7 @@ void point_at(void *p)
 
     printf("- addr0: %p\n", &addr0);
     printf("- addr1: %p\n", &addr1);
-    printf("- dist: %ld\n \n", (size_t)&addr1-(size_t)&addr0);
+    printf("- dist: %d\n \n", (size_t)&addr1-(size_t)&addr0);
 
 }
 

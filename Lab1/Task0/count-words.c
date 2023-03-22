@@ -8,8 +8,13 @@
 char *words(int count)
 {
   char *words = "words";
-  if (count == 1)
-    	words[strlen(words)-1] = '\0';
+  if (count == 1){
+
+    return "word";
+    // int size = sizeof(words)-1;
+    // printf("size: %i\n",size);
+    // &words[size] = '\0';
+  }
   
   return words;
 }
