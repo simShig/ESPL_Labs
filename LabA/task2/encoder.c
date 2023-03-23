@@ -45,7 +45,6 @@ int main(int argc, char **argv) {
    //loop to identify flags:
     for(i=1; i<argc; i++){
         // printf("arg num %d, and value is: %s\n",i,argv[i]);
-        // printf("\tisDebug: %d\n",isDebug);
         char* arg = argv[i];        
         char firstChar = arg[0];
         
@@ -59,7 +58,6 @@ int main(int argc, char **argv) {
                 encType=1;
                 encKey=argv[i]+2;   //points to the 2 'cell' (adress) from the start, gets the suffix of the arg
                 keyLen = getKeyLength(arg);
-                continue;
             }
         }else if (firstChar=='-'){
             if(arg[1]=='D'){
@@ -71,8 +69,18 @@ int main(int argc, char **argv) {
                 encType=-1;
                 encKey=argv[i]+2;   //points to the 2 'cell' (adress) from the start, gets the suffix of the arg
                 keyLen = getKeyLength(arg);
-                continue;
             }
+            else if(arg[1]=='i'){
+                inFile=fopen(argv[i]+2,"r");
+                if (inFile == NULL)
+                    fprintf(stderr, "Error: could not open input file %s\n", argv[i]+2);
+            }
+            else if(arg[1]=='o'){
+                outFile=fopen(argv[i]+2,"w");
+                if (outFile == NULL)
+                    fprintf(stderr, "Error: could not open output file %s\n", argv[i]+2);
+            }
+
         }
         if (isDebug==1) fprintf(stderr,"%s\n",argv[i]);
         
@@ -99,5 +107,12 @@ int main(int argc, char **argv) {
         }
     }
 
+    /* if opened - close files */
+    if (inFile != stdin) {
+        fclose(inFile);
+    }
+    if (outFile != stdout) {
+        fclose(outFile);
+    }
     return 0;
 }
