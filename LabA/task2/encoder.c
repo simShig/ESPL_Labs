@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
                 isDebug=0;
                 continue;
             }
+            
             else if(arg[1]=='e'){
                 isEncoding=1;
                 encType=-1;
