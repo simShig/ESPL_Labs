@@ -73,13 +73,16 @@ int main(int argc, char **argv) {
             }
             else if(arg[1]=='i'){
                 inFile=fopen(argv[i]+2,"r");
-                if (inFile == NULL)
-                    fprintf(stderr, "Error: could not open input file %s\n", argv[i]+2);
+                if (inFile == NULL){        /*handeling bad file opening,used: https://stackoverflow.com/questions/5612248/c-fopen-invalid-file */
+                    fprintf(stderr, "Error: could not open input file %s\nExiting program!\n\n", argv[i]+2);
+                    continue;
+                }
+                    
             }
             else if(arg[1]=='o'){
                 outFile=fopen(argv[i]+2,"w");
                 if (outFile == NULL)
-                    fprintf(stderr, "Error: could not open output file %s\n", argv[i]+2);
+                    fprintf(stderr, "Error: could not open output file %s\nExiting program!\n\n", argv[i]+2);
             }
 
         }
@@ -87,6 +90,7 @@ int main(int argc, char **argv) {
         
     }//finished line-args loop
     
+    if (inFile==NULL||outFile==NULL) return -1;  //in case one of the files wasnt correct (inFile\Outfile)
     
     //starting encription loop:
     while((inChar = fgetc(inFile)) != EOF){
