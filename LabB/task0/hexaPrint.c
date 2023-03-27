@@ -21,9 +21,9 @@ int main(int argc, char **argv)
     }
 
     const char *filename = argv[1];
-    FILE *inFile = fopen(filename, "rb");
-    if (!inFile) {
-        fprintf(stderr, "Error: could not open file '%s'\n", filename);
+    FILE *inFile = fopen(filename, "r");
+    if (inFile == NULL){
+        fprintf(stderr, "Error: could not open input file %s\nExiting program!\n\n",filename);
         return 1;
     }
 
