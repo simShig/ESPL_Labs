@@ -3,108 +3,51 @@
 #include <string.h>
 
 typedef struct virus {
-    unsigned short SigSize;
+    unsigned short sigSize;
     char virusName[16];
     unsigned char* sig;
 } virus;
 
-void debugPrintRead(unsigned char* signature){
-        unsigned short sigSize;
-        printf("UNcHANGED bytes are- [4]: %02X, [5]: %02X\n",signature[4],signature[5]);
-        sigSize = signature[4]<<8|signature[5];     //convert small indian hexa to dec, refferance: https://stackoverflow.com/questions/19275955/convert-little-endian-to-big-endian
-        printf("sigSize is: %i\n\n",sigSize);
-        for (int i = 0; i < 1000; i++)
-        {
-            printf("%02X ",signature[i]);  //~~DEBUG!!!
-        }
-        printf("\n");  //~~DEBUG!!!
-        for (int i = 0; i < 1000; i++)
-        {
-            printf("%c ",signature[i]);  //~~DEBUG!!!
-        }
-        printf("\n");  //~~DEBUG!!!
-}
 
-
+//     int size = buffer[4]<<8|buffer[5];     //convert small indian hexa to dec, refferance: https://stackoverflow.com/questions/19275955/convert-little-endian-to-big-endian
 
 // Reads the next virus from the given file pointer
 virus* readVirus(FILE* inFile) {
-    char inChar;
-    long filesize = 0;
-    /*~~1. transport file content to buffer~~*/
+    int MAGIC_NUM_SIZE = 4;
+    int VIRUS_NAME_SIZE = 16;
+    virus* v = (virus*) malloc(sizeof(virus));
+    char magicNum[MAGIC_NUM_SIZE+1];
 
-    // Get the file size
-    while((inChar = fgetc(inFile)) != EOF){
-        filesize++;
-    }
-    fseek(inFile, 0, SEEK_SET); //had troubles returnning to beginning of file (after the while fgetc), found better way then closing and opening again on stackOverFlow:
-                                // https://stackoverflow.com/questions/32366665/resetting-pointer-to-the-start-of-file
-
-    // printf("filesize:%li\n",filesize);
-
-    // Allocate a buffer for the file content
-    char *buffer = (char *) malloc(filesize);
-    printf("\t~~DEBUG~~ bufferSize is: %i\n",sizeof(buffer));  //##########DEBUG!!!#############
-    if (!buffer) {
-        fprintf(stderr, "Error: could not allocate memory\n");
-        fclose(inFile);
-        return NULL;
-    }
-    printf("file size is: %li \n",filesize);
-
-    // Read the file into the buffer
-    size_t bytes_read = fread(buffer, 1, filesize, inFile);
-    if (bytes_read != filesize) {
-        fprintf(stderr, "bytesRead: %i ,Error: could not read entire file\n",bytes_read);
-        fclose(inFile);
-        free(buffer);
-        return NULL;
-    }
-
-
-    /*~~2. read from buffer according to virus-stractures and allocate to virus's vars~~*/
-    char magicNum[4];
-    unsigned short SigSize[2];
-    int size = buffer[4]<<8|buffer[5];     //convert small indian hexa to dec, refferance: https://stackoverflow.com/questions/19275955/convert-little-endian-to-big-endian
-    char virusName[16];
-    unsigned char* sig=NULL;
-    virus* v = malloc(sizeof(virus));
-
-    for (int i = 0; i < 4; i++) {
-        magicNum[i]=(unsigned char)buffer[i];
-    }
-    printf("magicNum is:%s\n",magicNum);
-    for (int i = 0; i < 2; i++) {
-        SigSize[i]=buffer[i+4];
-    }
-    for (int i = 0; i < 16; i++) {
-        virusName[i]=buffer[i+6];
-    }
-
-    // sig =(unsigned char*)buffer[22];
-    for (int i = 0; i < size; i++) {
-        printf("\t~~DEBUG~~ i is: %i\n",i);  //##########DEBUG!!!#############
-        sig[i]=buffer[i+22];
-    }
-    memcpy(&v->SigSize, SigSize, sizeof(v->SigSize));
-    memcpy(v->virusName, virusName, sizeof(v->virusName));
-    memcpy(v->sig,sig , size);
+    // Read the magic number from the binary file
+    fread(magicNum, sizeof(char), MAGIC_NUM_SIZE, inFile);
+    magicNum[MAGIC_NUM_SIZE] = '\0';
+    
+    // Read the signature size from the binary file
+    fread(&v->sigSize, sizeof(unsigned short), 1, inFile);
+    
+    // Read the virus name from the binary file
+    fread(v->virusName, sizeof(char), VIRUS_NAME_SIZE, inFile);
+    v->virusName[VIRUS_NAME_SIZE] = '\0';
+    
+    int SIG_SIZE =v->sigSize;
+    v->sig = (unsigned char*) malloc(SIG_SIZE * sizeof(unsigned char));
+    // Read the signature from the binary file
+    fread(v->sig, sizeof(unsigned char), SIG_SIZE, inFile);
+    
     return v;
-  
-    // Clean up
-    free(buffer);
-    fclose(inFile);
 }
+
+
 
 
 // Prints the given virus to the given file pointer
 void printVirus(virus* v, FILE* output) {
     fprintf(output, "Virus name: %s\n", v->virusName);
-    fprintf(output, "Virus size: %d\n", v->SigSize);
+    fprintf(output, "Virus size: %d\n", v->sigSize);
     fprintf(output, "Signature:\n");
 
     // Print the virus signature in hexadecimal format
-    for (int i = 0; i < v->SigSize; i++) {
+    for (int i = 0; i < v->sigSize; i++) {
         fprintf(output, "%02X ", v->sig[i]);
     }
     fprintf(output, "\n");
@@ -125,7 +68,6 @@ int main(int argc, char** argv) {
 
     virus* v = readVirus(fp);
     printVirus(v,stdout);
-
 
     return 0;
 }
