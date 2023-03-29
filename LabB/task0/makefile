@@ -1,12 +1,12 @@
-all: hexaPrint 
+all: bubblesort 
 
-hexaPrint:hexaPrint.o
-	gcc -g -Wall -m32 -o hexaPrint hexaPrint.o
+bubblesort:bubblesort.o
+	gcc -g -Wall -m32 -o bubblesort bubblesort.o
 
-hexaPrint.o:hexaPrint.c 
-	gcc -g -Wall -m32 -c -o hexaPrint.o hexaPrint.c
+bubblesort.o:bubblesort.c 
+	gcc -g -Wall -m32 -c -o bubblesort.o bubblesort.c
 
 .PHONY: clean 
 
 clean: 
-	rm -f *.o hexaPrint 
+	rm -f *.o bubblesort 
