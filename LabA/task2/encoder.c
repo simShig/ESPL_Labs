@@ -34,9 +34,9 @@ int main(int argc, char **argv) {
     //encoder vars:
     FILE* outFile = stdout;
     FILE* inFile = stdin;
-    int isEncoding = 0;
+    int isEncoding = 1;     //CHANGED - deafult incode to +0 (not changed)
     int encType = 0 ;    //-/+, represented by -1/+1
-    char *encKey= NULL;
+    char *encKey= "0";      //CHANGED - deafult incode to +0 (not changed)
     int keyCounter=0;   
     int keyLen=0;
     char inChar;
@@ -44,7 +44,6 @@ int main(int argc, char **argv) {
 
    //loop to identify flags:
     for(i=1; i<argc; i++){
-        // printf("arg num %d, and value is: %s\n",i,argv[i]);
         char* arg = argv[i];        
         char firstChar = arg[0];
         

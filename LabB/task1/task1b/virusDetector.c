@@ -38,13 +38,14 @@ virus* readVirus(FILE* inFile) {
 void printVirus(virus* v, FILE* output) {
     fprintf(output, "Virus name: %s\n", v->virusName);
     fprintf(output, "Virus size: %d\n", v->sigSize);
-    fprintf(output, "Signature:\n");
+    fprintf(output, "Signature:");
 
     // Print the virus signature in hexadecimal format
     for (int i = 0; i < v->sigSize; i++) {
+        if(i%20==0) fprintf(output,"\n");
         fprintf(output, "%02X ", v->sig[i]);
     }
-    fprintf(output, "\n");
+    fprintf(output, "\n\n");
 }
 
 
@@ -59,9 +60,11 @@ virus *vir;
 
 void list_print(link *virus_list, FILE* outFile) {
     while (virus_list != NULL) {
-        printVirus(virus_list->vir,outFile);
+        printVirus(virus_list->vir,outFile);     //change back to outFile
         virus_list = virus_list->nextVirus; /* Move to the next link. */
     }
+    fprintf(outFile,"\tDEBUG!!!end of listPrint, outFile is:%s\n",outFile);         //@@@@@DEBUG@@@@
+
 }
 
 link* list_append(link* virus_list, virus* data) {
@@ -92,18 +95,14 @@ void list_free(link *virus_list) {
     }
 }
 
-
-
-
-
 int parseFile(FILE* inFile,link* virus_list){
     int MAGIC_NUM_SIZE = 4;
     char magicNum[MAGIC_NUM_SIZE+1];
     // Read the magic number from the binary file
     fread(magicNum, sizeof(char), MAGIC_NUM_SIZE, inFile);
     magicNum[MAGIC_NUM_SIZE] = '\0';
-    printf("\t~DEBUG: magicNum is: %s\n",magicNum); //###DEBUG
-    printf("\t~DEBUG: sizeof(magicNum) is: %i\n",sizeof(magicNum)); //###DEBUG
+    // printf("\t~DEBUG: magicNum is: %s\n",magicNum); //###DEBUG
+    // printf("\t~DEBUG: sizeof(magicNum) is: %i\n",sizeof(magicNum)); //###DEBUG
         /* doesnot compares correctly,need to fix*/
     if(strcmp("VISL", magicNum) != 0){
         printf("magicNum is: %s, exiting program\n",magicNum);
@@ -113,36 +112,186 @@ int parseFile(FILE* inFile,link* virus_list){
     virus* v=NULL;
     do{
         v = readVirus(inFile);
-        list_append(virus_list,v);
-        printVirus(v,stdout);
-        printf("\n\n");
+        if(v!=NULL){
+            list_append(virus_list,v);
+            // printVirus(v,stdout);
+            // printf("\n\n");
+        }
     }while(v!=NULL);
+    printf("parsed ok\n");
     return 1;//finished sucssessfully
 }
 
+/* ~~~~~~DETECTION STUFF:*/
+void detect_virus(char *buffer, unsigned int size, link *virus_list) {
+    // printf("\tDEBUG1 in detect_virus!!!\n");         //@@@@@DEBUG@@@@
+    while (virus_list!=NULL)
+    {
+        virus* current_virus = virus_list->vir;
+    // for (virus *current_virus = virus_list->vir; virus_list != NULL; current_virus = ) {
+        for (unsigned int i = 0; i <= size - current_virus->sigSize; i++) {
+            if (memcmp(current_virus->sig, buffer + i, current_virus->sigSize) == 0) {
+                printf("\tDEBUG2 in detect_virus!!!v.name is %s,i=%i,size-sigSize=%i \n",current_virus->virusName,i,size-current_virus->sigSize);         //@@@@@DEBUG@@@@
+                printf("Virus detected: %s\n", current_virus->virusName);
+                printf("Starting byte location in the suspected file: %u\n", i);
+                printf("Size of the virus signature: %u\n", current_virus->sigSize);
+            }
+    
+        }
+        virus_list=virus_list->nextVirus;
+    }
+}
 
+
+/* ~~~~Menu stuff:*/
+struct fun_desc { 
+  char *name; 
+  virus* (*fun)(virus* v, FILE* output); 
+  };
+  
+
+  struct fun_desc menu[] = { 
+    { NULL, NULL },
+    { "Load signatures", readVirus }, 
+    { "Print signatures", printVirus }, 
+    { "Detect viruses", NULL }, 
+    { "Fix file", NULL }, 
+    { "Quit", NULL }
+  };
 
 
 int main(int argc, char** argv) {
     FILE* outFile = stdout;
     link* virus_list=NULL;
-    if (argc != 2) {
+    if (argc != 1) {
         printf("error, exiting program\n");
         return 1;
     }
 
-    FILE* fp = fopen(argv[1], "r");
-    if (!fp) {
-        printf("Could not open file %s\n", argv[1]);
-        return 1;
+    // FILE* fp = fopen(argv[1], "r");
+    // if (!fp) {
+    //     printf("Could not open file %s\n", argv[1]);
+    //     return 1;
+    // }
+    
+    int menu_input;
+//   int bound = sizeof(menu)/8-2; //lower bound - 1,upper bound - 6
+//   // printf ("%i\n",bound);
+  int flag = 1;   //all flags to deal with double print of menu because of 0A garbage values
+  
+  while (1) {
+    /* print menu iteritavly:*/
+    if (flag !=0){
+      printf("Select operation from the following menu:\n");
+      for (int i = 1; i < 6; i++)
+      {
+        printf( "%i)  %s\n", i,menu[i].name);
+      }
+    }
+    flag = 1; 
+
+    // /* recieve user input:*/
+    char input[256];
+    if (fgets(input, 256, stdin) == NULL) {
+      break; // if EOF - exit while loop
+    }
+    menu_input = input[0];
+    // printf("input is:%i\n",menu_input);
+    if (menu_input==10) flag = 0;   //ascii - hxa garbage 0A
+    // if (menu_input==EOF) break;
+
+    menu_input=menu_input-48;
+    if (menu_input>0&&menu_input<=5)
+    { 
+      printf ("within bounds!\n");
+      /* code */
+    }else {
+      printf("not within bounds!\n");
+      break;
     }
 
-    parseFile(fp,virus_list);
-    // virus* v = readVirus(fp);
-    // outFile=fopen("test","w");
+   
+//   /* activate chosen input:*/
+    
+    if (menu_input==1)  //load
+    {
+        printf("insert filename:\n");
+        char anotherInput[256];
+        char* fileName = fgets(anotherInput, 256, stdin);
+        fileName[strcspn(fileName, "\n")] = '\0'; // remove the newline character
+        FILE* fp = fopen(fileName, "r");
+        printf("fp is: %s\n", fileName);
+        if (!fp) {
+            printf("Could not open file %s\n", fileName);
+            return 1;
+        }
+        int isParsed=0; //-1 no, +1 yes
+        isParsed = parseFile(fp,&virus_list);
+        if(isParsed!=1){
+            printf("parse failed...\n");
+            continue;;   //continue loop if parse fails
+        }
+    }
+    if (menu_input==2){  //print
+        printf("insert output filename (enter if default:stdout)\n");
+        char anotherInput[256];
+        char* fileName = fgets(anotherInput, 256, stdin);
+        if (fileName[0]!=10){ //if not "enter"
+            fileName[strcspn(fileName, "\n")] = '\0'; // remove the newline character
+            outFile = fopen(fileName, "w");
+            printf("fp is: %s\n", fileName);   
+        }
+        if (virus_list==NULL) continue; //if print before load
+        list_print(virus_list,outFile);     //BUG - when printing to stdout - prints all. when print to file - prints partly (95%)
+    }
+    if (menu_input==3)  //detect
+    {
+        if (virus_list==NULL) continue; //if detect before load
+        FILE* inFile = NULL;
+        printf("insert input filename for scanning:\n");
+        char anotherInput[256];
+        char* fileName = fgets(anotherInput, 256, stdin);
+        fileName[strcspn(fileName, "\n")] = '\0'; // remove the newline character
+        inFile = fopen(fileName, "r");
+        if (fileName[0]==10||inFile==NULL){ //if "enter" || couldnt open file
+            printf("couldnt open file\n");
+            continue;
+        }
+        printf("fp is: %s\n", fileName);   
+        char buffer[10000];
+        size_t bytes_read = fread(buffer, 1, 10000, inFile);
+        printf("\tDEBUG in menuInput=3!!!\n");         //@@@@@DEBUG@@@@
+        detect_virus(buffer, bytes_read, virus_list);
+
+        // printf("not implemented");
+        // menu[3].fun(v,outFile);
+    }
+    if (menu_input==4)  //fix
+    {
+        printf("not implemented");
+        // menu[3].fun(v,outFile);
+    }
+    if (menu_input==5)  //quit
+    {
+        printf("quiting\n");
+        return 0;
+    }
+  
+
+  }
+    
+    
+    
+    
+    
+    // int isParsed=0; //-1 no, +1 yes
+    // isParsed = parseFile(fp,&virus_list);
+    // if(isParsed!=1) return 0;
+    // // printf("\t~~DEBUG~~\n");
+    // outFile=fopen("newtest","w");
     //             if (outFile == NULL)
     //                 fprintf(stderr, "Error: could not open output file\nExiting program!\n\n");     
-    // if(v!=NULL) printVirus(v,stdout);      //change stdout to outfile
+    // list_print(virus_list,outFile);
 
     return 0;
-}
+  }
