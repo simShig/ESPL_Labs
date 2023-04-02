@@ -88,8 +88,10 @@ link* list_append(link* virus_list, virus* data) {
 void list_free(link *virus_list) {
     link *current_link = virus_list;
     while (current_link != NULL) {
+        printf("\tinside list_free, current link is:%s\n",current_link->vir->virusName);
         link *temp_link = current_link; /* Store a reference to the current link. */
         current_link = current_link->nextVirus; /* Move to the next link before freeing the current link. */
+        free(temp_link->vir->sig); /* Free the memory allocated for the virus struct. */
         free(temp_link->vir); /* Free the memory allocated for the virus struct. */
         free(temp_link); /* Free the memory allocated for the current link. */
     }
