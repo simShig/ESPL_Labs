@@ -142,8 +142,7 @@ void detect_virus(char *buffer, unsigned int size, link *virus_list) {
     }
 }
 
-/* FIXING STUFF::*/
-// void neutralize_virus(char *fileName, int signatureOffset)
+/* FIXING STUFF:*/
 void fix_virus(char *buffer, unsigned int size, link *virus_list) {
     // printf("\tDEBUG1 in detect_virus!!!\n");         //@@@@@DEBUG@@@@
     while (virus_list!=NULL)
@@ -153,9 +152,8 @@ void fix_virus(char *buffer, unsigned int size, link *virus_list) {
         for (unsigned int i = 0; i <= size - current_virus->sigSize; i++) {
             if (memcmp(current_virus->sig, buffer + i, current_virus->sigSize) == 0) {
                 printf("\tDEBUG2 in detect_virus!!!v.name is %s,i=%i,size-sigSize=%i \n",current_virus->virusName,i,size-current_virus->sigSize);         //@@@@@DEBUG@@@@
-                neutralize_virus(buffer,i);
-                printf("done nutrulizing\n");
-
+                // neutralize_virus("infected",107);
+                printf("Virus neutrulized?\n");
             }
     
         }
@@ -164,11 +162,35 @@ void fix_virus(char *buffer, unsigned int size, link *virus_list) {
 }
 
 void neutralize_virus(char *fileName, int signatureOffset) {
-            // Neutralize the virus by overwriting the first byte with a RET instruction
+    // Open the file for reading and writing
+    FILE *file = fopen(fileName, "r+b");
+    if (file == NULL) {
+        printf("Error: failed to open file '%s'\n", fileName);
+        return;
+    }
+
+    // Find the size of the file
+    fseek(file, 0, SEEK_END);
+    int fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Read the entire file into memory
+    char *fileBuffer = (char *) malloc(fileSize);
+    fread(fileBuffer, 1, fileSize, file);
+       // Neutralize the virus by overwriting the first byte with a RET instruction
             char retInstruction = 0xC3; // RET instruction opcode
-            fseek(fileName, signatureOffset, SEEK_SET);
-            fwrite(&retInstruction, 1, 1, fileName);
+            fseek(file, signatureOffset, SEEK_SET);
+            printf("\tDEBUG after seek before write!!!\n");         //@@@@@DEBUG@@@@
+
+            fwrite(&retInstruction, 1, 1, file);
+
+    // Clean up
+    free(fileBuffer);
+    fclose(file);
 }
+
+
+
 
 
 
@@ -192,6 +214,9 @@ struct fun_desc {
 int main(int argc, char** argv) {
     FILE* outFile = stdout;
     link* virus_list=NULL;
+    FILE* inFile = NULL;
+    char buffer[10000];
+    size_t bytes_read;
     if (argc != 1) {
         printf("error, exiting program\n");
         return 1;
@@ -220,6 +245,7 @@ int main(int argc, char** argv) {
     flag = 1; 
 
     // /* recieve user input:*/
+    
     char input[256];
     if (fgets(input, 256, stdin) == NULL) {
       break; // if EOF - exit while loop
@@ -260,6 +286,7 @@ int main(int argc, char** argv) {
             printf("parse failed...\n");
             continue;;   //continue loop if parse fails
         }
+        fclose(fp);
     }
     if (menu_input==2){  //print
         printf("insert output filename (enter if default:stdout)\n");
@@ -276,7 +303,7 @@ int main(int argc, char** argv) {
     if (menu_input==3)  //detect
     {
         if (virus_list==NULL) continue; //if detect before load
-        FILE* inFile = NULL;
+        // FILE* inFile = NULL;
         printf("insert input filename for scanning:\n");
         char anotherInput[256];
         char* fileName = fgets(anotherInput, 256, stdin);
@@ -287,32 +314,47 @@ int main(int argc, char** argv) {
             continue;
         }
         printf("fp is: %s\n", fileName);   
-        char buffer[10000];
-        size_t bytes_read = fread(buffer, 1, 10000, inFile);
+        bytes_read = fread(buffer, 1, 10000, inFile);
         printf("\tDEBUG in menuInput=3!!!\n");         //@@@@@DEBUG@@@@
         detect_virus(buffer, bytes_read, virus_list);
-
+        fclose(inFile);
         // printf("not implemented");
         // menu[3].fun(v,outFile);
     }
-    if (menu_input==4)  //fix - https://pdos.csail.mit.edu/6.828/2005/readings/i386/RET.htm
+    if (menu_input==4)  //fix
     {
-        /*
-        fixing proccedure using hexadit:
-        hexadit ./infected
-        (find the adress of beggining of virus signature)
-        change to "C3" (opCode for RET (near))
-        ctrl+x (save)
-        y (approve saving)
-        finished. run again.
-        */
-        printf("not implemented");
+        printf("insert input filename for fixing:\n");
+        char anotherInput[256];
+        char* fileName = fgets(anotherInput, 256, stdin);
+        fileName[strcspn(fileName, "\n")] = '\0'; // remove the newline character
+        inFile = fopen(fileName, "r");
+        if (fileName[0]==10||inFile==NULL){ //if "enter" || couldnt open file
+            printf("couldnt open file\n");
+            continue;
+        }
+        printf("insert sigOffset place:\n");
+        int sigOffset;
+        char input[10];
+        fgets(input, 10, stdin);
+        sigOffset = atoi(input);
+        printf("sigOff is: %i\n", sigOffset);   
+        neutralize_virus(fileName,sigOffset);
+           printf("\t after neutrulize???\n");
         // menu[3].fun(v,outFile);
+        fclose(inFile);
     }
     if (menu_input==5)  //quit
     {
+        // free(outFile);
+        // printf("outfile freed\n");
+        // free(inFile);
+        // printf("infile freed\n");
+        list_free(virus_list);
+        printf("vir_list freed\n");
+        // free(buffer);
+        // printf("buffer freed\n");
         printf("quiting\n");
-        return 0;
+        break;
     }
   
 
@@ -329,7 +371,8 @@ int main(int argc, char** argv) {
     // outFile=fopen("newtest","w");
     //             if (outFile == NULL)
     //                 fprintf(stderr, "Error: could not open output file\nExiting program!\n\n");     
-    // list_print(virus_list,outFile);
-
+        // list_print(virus_list,outFile);
+    if (inFile!=NULL) close(inFile);
+    if (outFile!=NULL) close(outFile);
     return 0;
   }
