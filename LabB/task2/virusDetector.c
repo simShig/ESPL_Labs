@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
     menu_input=menu_input-48;
     if (menu_input>0&&menu_input<=5)
     { 
-      printf ("within bounds!\n");
+    //   printf ("within bounds!\n");       //redundent...
     }else {
       printf("not within bounds!\n");
       break;
