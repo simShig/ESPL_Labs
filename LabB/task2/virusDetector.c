@@ -119,6 +119,8 @@ void detect_virus(char *buffer, unsigned int size, link *virus_list) {
         }
         virus_list=virus_list->nextVirus;
     }
+     printf("finished scanning file\n");
+   
 }
 
 /* FIXING STUFF:*/
@@ -140,9 +142,9 @@ void neutralize_virus(char *fileName, int signatureOffset) {
     char retInstruction = 0xC3; // RET opcode
     fseek(file, signatureOffset, SEEK_SET);
     fwrite(&retInstruction, 1, 1, file);
-
     free(fileBuffer);
     fclose(file);
+    printf("finished fixing file\n");
 }
 
 
@@ -166,13 +168,19 @@ struct fun_desc {
 int main(int argc, char** argv) {
     FILE* outFile = stdout;
     link* virus_list=NULL;
-    FILE* inFile = NULL;
     char buffer[10000];
     size_t bytes_read;
-    if (argc != 1) {
-        printf("error, exiting program\n");
+    if (argc != 2) {
+        printf("error-wrong amount of command-line arguments,\nexiting program\n");
         return 1;
     }
+
+    FILE* inFile = fopen(argv[1], "r");
+    if (!inFile) {
+        printf("Could not open file %s\n", argv[1]);
+        return 1;
+    }
+
     int menu_input;
   int flag = 1;   //all flags to deal with double print of menu because of 0A garbage values
   
@@ -236,47 +244,27 @@ int main(int argc, char** argv) {
             outFile = fopen(fileName, "w");
         }
         if (virus_list==NULL) continue; //if print before load
-        list_print(virus_list,outFile);  
+        list_print(virus_list,outFile);
+        outFile = stdout;       //back to deafult  
+
     }
     if (menu_input==3)  //detect
     {
         if (virus_list==NULL) continue; //if detect before load
-        printf("insert input filename for scanning:\n");
-        char anotherInput[256];
-        char* fileName = fgets(anotherInput, 256, stdin);
-        fileName[strcspn(fileName, "\n")] = '\0'; // remove the newline character
-        inFile = fopen(fileName, "r");
-        if (fileName[0]==10||inFile==NULL){ //if "enter" || couldnt open file
-            printf("couldnt open file\n");
-            continue;
-        }
-        printf("fp is: %s\n", fileName);   
         bytes_read = fread(buffer, 1, 10000, inFile);
         detect_virus(buffer, bytes_read, virus_list);
-        fclose(inFile);
+    if (inFile!=NULL) fclose(inFile);
     
-        // menu[3].fun(v,outFile);
     }
     if (menu_input==4)  //fix
     {
-        printf("insert input filename for fixing:\n");
-        char anotherInput[256];
-        char* fileName = fgets(anotherInput, 256, stdin);
-        fileName[strcspn(fileName, "\n")] = '\0'; // remove the newline character
-        inFile = fopen(fileName, "r");
-        if (fileName[0]==10||inFile==NULL){ //if "enter" || couldnt open file
-            printf("couldnt open file\n");
-            continue;
-        }
-        printf("insert sigOffset place:\n");
+        printf("insert sigOffset for fixing:\n");
         int sigOffset;
         char input[10];
         fgets(input, 10, stdin);
         sigOffset = atoi(input);
         printf("sigOff is: %i\n", sigOffset);   
-        neutralize_virus(fileName,sigOffset);
-        // menu[3].fun(v,outFile);
-        fclose(inFile);
+        neutralize_virus(argv[1],sigOffset);
     }
     if (menu_input==5)  //quit
     {
@@ -288,7 +276,7 @@ int main(int argc, char** argv) {
   
 
   }
-    if (inFile!=NULL) fclose(inFile);
-    if (outFile!=NULL) fclose(outFile);
+    if (!inFile) fclose(inFile);
+    if (!outFile) fclose(outFile);
     return 0;
   }
