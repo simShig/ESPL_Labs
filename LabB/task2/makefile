@@ -1,10 +1,10 @@
 all: virusDetector 
 
-virusDetector:virusDetector.o
-	gcc -g -Wall -m32 -o virusDetector virusDetector.o
+virusDetector:AntiVirus.o
+	gcc -g -Wno-incompatible-pointer-types -m32 -o virusDetector AntiVirus.o
 
-virusDetector.o:virusDetector.c 
-	gcc -g -Wall -m32 -c -o virusDetector.o virusDetector.c
+AntiVirus.o:AntiVirus.c 
+	gcc -g -Wno-incompatible-pointer-types -m32 -c -o AntiVirus.o AntiVirus.c
 
 .PHONY: clean 
 

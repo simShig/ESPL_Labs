@@ -250,7 +250,10 @@ int main(int argc, char** argv) {
     }
     if (menu_input==3)  //detect
     {
-        if (virus_list==NULL) continue; //if detect before load
+        if (virus_list==NULL){
+            printf("no Signatures List has been loaded...\n");
+            continue; //if detect before load
+        }
         bytes_read = fread(buffer, 1, 10000, inFile);
         detect_virus(buffer, bytes_read, virus_list);
     if (inFile!=NULL) fclose(inFile);
