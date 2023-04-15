@@ -12,10 +12,12 @@ typedef struct virus {
 virus* readVirus(FILE* inFile) {
     int nameSize = 16;
     virus* v = (virus*) malloc(sizeof(virus));
+    v->sigSize=0;
     fread(&v->sigSize, sizeof(unsigned short), 1, inFile);  //read sigSize
     fread(v->virusName, sizeof(char), nameSize, inFile); //read virName
     v->virusName[nameSize] = '\0';
-    int sigLength =v->sigSize;
+    int sigLength =0;
+    sigLength =v->sigSize;
         if(sigLength==0) return NULL;
     v->sig = (unsigned char*) malloc(sigLength * sizeof(unsigned char));
     fread(v->sig, sizeof(unsigned char), sigLength, inFile); //read signature itself
@@ -77,7 +79,8 @@ void list_free(link *virus_list) {
     while (current_link != NULL) {
         link *temp_link = current_link; //so i can free space without "losing" my pointer to next
         current_link = current_link->nextVirus;
-        // free(temp_link->vir->sig); //free malloc for SIG
+        printf("\tfreed sig of virus %s\n",temp_link->vir->virusName);
+        free(temp_link->vir->sig); //free malloc for SIG
         free(temp_link->vir); //free malloc for V
         free(temp_link); //free malloc for link
     }
@@ -256,7 +259,7 @@ int main(int argc, char** argv) {
         }
         bytes_read = fread(buffer, 1, 10000, inFile);
         detect_virus(buffer, bytes_read, virus_list);
-    if (inFile!=NULL) fclose(inFile);
+    if (!inFile) fclose(inFile);
     
     }
     if (menu_input==4)  //fix
@@ -279,7 +282,7 @@ int main(int argc, char** argv) {
   
 
   }
-    if (!inFile) fclose(inFile);
+    fclose(inFile);
     if (!outFile) fclose(outFile);
     return 0;
   }
