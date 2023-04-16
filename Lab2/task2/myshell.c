@@ -28,7 +28,7 @@ int execute(cmdLine *pCmdLine) {
             perror("Error opening output file");
             return -1;
         }
-        dup2(fileno(outputFile), STDOUT_FILENO);
+        dup2(fileno(outputFile), STDOUT_FILENO);       //referance from stackOverflow - https://stackoverflow.com/questions/14543443/in-c-how-do-you-redirect-stdin-stdout-stderr-to-files-when-making-an-execvp-or
         fclose(outputFile);
     }
 
