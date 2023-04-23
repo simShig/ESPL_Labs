@@ -109,6 +109,7 @@ int parseFile(FILE* inFile,link* virus_list){
 
 /* ~~~~~~DETECTION STUFF:*/
 void detect_virus(char *buffer, unsigned int size, link *virus_list) {
+    
     while (virus_list!=NULL)
     {
         virus* current_virus = virus_list->vir;
@@ -253,13 +254,18 @@ int main(int argc, char** argv) {
     }
     if (menu_input==3)  //detect
     {
+            FILE* inFile = fopen(argv[1], "r");
+
         if (virus_list==NULL){
             printf("no Signatures List has been loaded...\n");
             continue; //if detect before load
         }
         bytes_read = fread(buffer, 1, 10000, inFile);
+        printf("!!DEBUG: bytes read: %d from file %d\n",bytes_read,inFile);         //DEBUG
+
         detect_virus(buffer, bytes_read, virus_list);
-    if (!inFile) fclose(inFile);
+        printf("!!DEBUG: finished detecting\n");        //DEBUG
+    // if (!inFile) fclose(inFile);
     
     }
     if (menu_input==4)  //fix
@@ -282,7 +288,7 @@ int main(int argc, char** argv) {
   
 
   }
-    fclose(inFile);
+    // fclose(inFile);
     if (!outFile) fclose(outFile);
     return 0;
   }

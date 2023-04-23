@@ -9,9 +9,7 @@
 #include <signal.h>
 #include <errno.h>
 
-
-#define MAX_INPUT_SIZE 2048
-
+    
 int execute(cmdLine *pCmdLine) {
     int execReturnVal;
 
@@ -55,9 +53,9 @@ void handleSignal(int signal) {
 }
 
 int main(int argc, char **argv) {
-
+    int maxInputSize = 2048;
     int debugMode = 0;
-    char input[MAX_INPUT_SIZE];
+    char input[maxInputSize];
     cmdLine *parsedCmdLine;
 
     for (int i = 1; i < argc; i++) {
@@ -67,9 +65,9 @@ int main(int argc, char **argv) {
     }
 
     while (1) {
-        getcwd(input, MAX_INPUT_SIZE);
-        printf("%s>> ", input);
-        fgets(input, MAX_INPUT_SIZE, stdin);
+        getcwd(input, maxInputSize);
+        printf("%s$>>: ", input);
+        fgets(input, maxInputSize, stdin);
         parsedCmdLine = parseCmdLines(input);
 
         if (strcmp(parsedCmdLine->arguments[0], "quit") == 0) {
