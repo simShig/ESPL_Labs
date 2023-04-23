@@ -74,7 +74,6 @@ int main(int argc, char **argv) {
             freeCmdLines(parsedCmdLine);
             exit(0);
         }
-/////////////////i added this i order to implemet task 1 c:
         if (strcmp(parsedCmdLine->arguments[0], "cd") == 0) {
             if (chdir(parsedCmdLine->arguments[1]) == -1) {
                 fprintf(stderr, "cd: %s: No such file or directory\n", parsedCmdLine->arguments[1]);
@@ -82,13 +81,11 @@ int main(int argc, char **argv) {
             freeCmdLines(parsedCmdLine);
             continue;
         }
-        ////////////////////////
-        //added this in order to implement 3:
+
         signal(SIGTSTP, handleSignal);
         signal(SIGCONT, handleSignal);
         signal(SIGINT, handleSignal);
-        ////////////////////////
-        pid_t pid = fork();
+
 
         //added this in order to use suspend wake and kill  
         if (strcmp(parsedCmdLine->arguments[0], "suspend") == 0) {
@@ -113,23 +110,27 @@ int main(int argc, char **argv) {
         freeCmdLines(parsedCmdLine);
         continue;
         }
-        if (pid == 0) { // child process
-            int execReturnVal = execute(parsedCmdLine);
-            if (execReturnVal == -1) {
-                _exit(EXIT_FAILURE);
+        else {
+            pid_t pid = fork();
+            if (pid == 0) { // child process
+                int execReturnVal = execute(parsedCmdLine);
+                if (execReturnVal == -1) {
+                    _exit(EXIT_FAILURE);
+                }
+                exit(0);
+            } else if (pid > 0) { // parent process
+                if (debugMode) {
+                    printDebugInfo(pid, parsedCmdLine->arguments[0]);
+                }
+                freeCmdLines(parsedCmdLine);
+                if (parsedCmdLine->blocking) {
+                    waitpid(pid, NULL, 0);
+                }
+            } else { // fork failed
+                perror("fork failed");
+                freeCmdLines(parsedCmdLine);
+                exit(EXIT_FAILURE);
             }
-        } else if (pid > 0) { // parent process
-            if (debugMode) {
-                printDebugInfo(pid, parsedCmdLine->arguments[0]);
-            }
-            freeCmdLines(parsedCmdLine);
-            if (parsedCmdLine->blocking) {
-                waitpid(pid, NULL, 0);
-            }
-        } else { // fork failed
-            perror("fork failed");
-            freeCmdLines(parsedCmdLine);
-            exit(EXIT_FAILURE);
         }
     }
 }
