@@ -164,7 +164,7 @@ cmdLine *parseCmdLines(const char *strLine)
 
 void freeCmdLines(cmdLine *pCmdLine)
 {
-  printf("\t FREEing cmdLine: %s\n",pCmdLine->arguments[0]);
+  // printf("\t FREEing cmdLine: %s, inpRed is: %s, outpRed is: %s\n",pCmdLine->arguments[0],pCmdLine->inputRedirect,pCmdLine->outputRedirect);
   int i;
   if (!pCmdLine)
     return;

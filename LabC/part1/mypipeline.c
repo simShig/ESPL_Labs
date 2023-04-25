@@ -8,13 +8,13 @@ int main() {
     int pipefd[2];
     pid_t child1_pid, child2_pid;
 
-    // Step 1: create a pipe
+//1. Create a pipe.
     if (pipe(pipefd) == -1) {
         perror("pipe ERROR");
         exit(EXIT_FAILURE);
     }
 
-    // Step 2: fork the first child process (child1)
+//2. Fork a first child process (child1).
     fprintf(stderr, "(parent_process>forking…)\n");
     child1_pid = fork();
     if (child1_pid!=0 ) fprintf(stderr, "(parent_process>created process with id: %d)\n",child1_pid);
@@ -24,15 +24,15 @@ int main() {
     }
 
     if (child1_pid == 0) {
-        // Step 3: in child1 process
+//3. In the child1 process:
         fprintf(stderr, "(child1>redirecting stdout to the write end of the pipe...)\n");
-        // close the standard output
+        //3.1 close the standard output
         close(STDOUT_FILENO);
-        // duplicate the write-end of the pipe
+        //3.2. Duplicate the write-end of the pipe using dup (see man).
         dup(pipefd[1]);
-        // close the file descriptor that was duplicated
+        //3.3. Close the file descriptor that was duplicated.
         close(pipefd[1]);
-        // execute "ls -l"
+        //3.4. Execute "ls -l".
         char* args[] = {"ls", "-l", NULL};
         fprintf(stderr, "(child1>going to execute cmd: 'ls -l')\n");
         if(execvp(args[0], args)==-1){
@@ -40,13 +40,12 @@ int main() {
             exit(EXIT_FAILURE);
         }
     } else {
-        // Step 4: in parent process
-        // close the write end of the pipe
+//4. In the parent process: Close the write end of the pipe.
         close(pipefd[1]);
         fprintf(stderr, "(parent_process>closing the write end of the pipe...)\n");
     }
 
-    // Step 5: fork the second child process (child2)
+//5. Fork a second child process (child2).
     fprintf(stderr, "(parent_process>forking…)\n"); 
     child2_pid = fork();
     if (child2_pid!=0 ) fprintf(stderr, "(parent_process>created process with id: %d)\n",child2_pid);
@@ -56,15 +55,15 @@ int main() {
     }
 
     if (child2_pid == 0) {
-        // Step 6: in child2 process
+ //6. In the child2 process:
         fprintf(stderr, "(child2>redirecting stdin to the read end of the pipe...)\n");
-        // close the standard input
+        //6.1. Close the standard input
         close(STDIN_FILENO);
-        // duplicate the read-end of the pipe
+        //6.2. Duplicate the read-end of the pipe using dup.
         dup(pipefd[0]);
-        // close the file descriptor that was duplicated
+        //6.3. Close the file descriptor that was duplicated.
         close(pipefd[0]);
-        // execute "tail -n 2"
+        //6.4. Execute "tail -n 2".
         char* args[] = {"tail", "-n", "2", NULL};
         fprintf(stderr, "(child2>going to execute cmd: 'tail -n 2')\n");
         if(execvp(args[0], args)==-1){
@@ -72,18 +71,17 @@ int main() {
             exit(EXIT_FAILURE);
         }
     } else {
-        // Step 7: in parent process
+//7. In the parent process: Close the read end of the pipe.
         // close the read end of the pipe
         close(pipefd[0]);
         fprintf(stderr, "(parent_process>closing the read end of the pipe...)\n");
     }
 
-    // Step 8: wait for child processes to terminate
+//8. Now wait for the child processes to terminate, in the same order of their execution.
     fprintf(stderr, "(parent_process>waiting for child processes to terminate...)\n");
     waitpid(child1_pid, NULL, 0);
     waitpid(child2_pid, NULL, 0);
 
-    // before exiting
     fprintf(stderr, "(parent_process>exiting...)\n");
 
     return 0;

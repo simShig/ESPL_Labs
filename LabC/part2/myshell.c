@@ -141,20 +141,19 @@ int main(int argc, char **argv) {
                     }        
         } else {        //case its "dual" command:
            
-    //~~~~~~~~~~~~~~~~~~~~~mypipeline*~~~~~~~~~~~~~~~~~~~`
+    //~~~~~~~~~~~~~~~~~~~~~ref - mypipeline*~~~~~~~~~~~~~~~~~~~`
             int pipefd[2];
             pid_t child1_pid, child2_pid;
 
-            // Step 1: create a pipe
             if (pipe(pipefd) == -1) {
                 perror("pipe ERROR");
                 exit(EXIT_FAILURE);
             }
 
-            // Step 2: fork the first child process (child1)
-            fprintf(stderr, "(parent_process>forking…)\n");
+            // ~~CHILD_1~~~:
+            // fprintf(stderr, "(parent_process>forking…)\n");
             child1_pid = fork();
-            if (child1_pid!=0 ) fprintf(stderr, "(parent_process>created process with id: %d)\n",child1_pid);
+            // if (child1_pid!=0 ) fprintf(stderr, "(parent_process>created process with id: %d)\n",child1_pid);
             if (child1_pid == -1) {
                 perror("fork ERROR");
                 exit(EXIT_FAILURE);
@@ -164,20 +163,14 @@ int main(int argc, char **argv) {
 
                 
                
-                // Step 3: in child1 process
-                fprintf(stderr, "(child1>redirecting stdout to the write end of the pipe...)\n");
-                // close the standard output
+                // fprintf(stderr, "(child1>redirecting stdout to the write end of the pipe...)\n");
                 close(STDOUT_FILENO);
-                // duplicate the write-end of the pipe
                 dup(pipefd[1]);
-                // close the file descriptor that was duplicated
                 close(pipefd[1]);
-                // execute cmd1
                 freeCmdLines(parsedCmdLine);
                 parsedCmdLine=parseCmdLines(cmd1);
                 if (parsedCmdLine->outputRedirect==NULL){
-                    printf ("\t@@DEBUG1@@\n");         //DEBUG~~~~
-                    fprintf(stderr, "(child1>going to execute cmd: %s)\n",cmd1);
+                    // fprintf(stderr, "(child1>going to execute cmd: %s)\n",cmd1);
                     int execReturnVal = execute(parsedCmdLine);
                     if (execReturnVal == -1) {
                         _exit(EXIT_FAILURE);
@@ -190,39 +183,32 @@ int main(int argc, char **argv) {
                 if (debugMode) {
                     printDebugInfo(child1_pid, parsedCmdLine->arguments[0]);
                 }
-                // Step 4: in parent process
-                // close the write end of the pipe
-                close(pipefd[1]);
-                fprintf(stderr, "(parent_process>closing the write end of the pipe...)\n");
-            }
-            // freeCmdLines(parsedCmdLine);
+            // ~~PARENT~~~:
 
-            // Step 5: fork the second child process (child2)
-            fprintf(stderr, "(parent_process>forking…)\n"); 
+                close(pipefd[1]);
+                // fprintf(stderr, "(parent_process>closing the write end of the pipe...)\n");
+            }
+
+            // ~~CHILD_2~~~:
+            // fprintf(stderr, "(parent_process>forking…)\n"); 
             child2_pid = fork();
-            if (child2_pid!=0 ) fprintf(stderr, "(parent_process>created process with id: %d)\n",child2_pid);
+            // if (child2_pid!=0 ) fprintf(stderr, "(parent_process>created process with id: %d)\n",child2_pid);
             if (child2_pid == -1) {
                 perror("fork ERROR");
                 exit(EXIT_FAILURE);
             }
 
             if (child2_pid == 0) {
-                // Step 6: in child2 process
-                fprintf(stderr, "(child2>redirecting stdin to the read end of the pipe...)\n");
-                // close the standard input
+                // fprintf(stderr, "(child2>redirecting stdin to the read end of the pipe...)\n");
                 close(STDIN_FILENO);
-                // duplicate the read-end of the pipe
                 dup(pipefd[0]);
-                // close the file descriptor that was duplicated
                 close(pipefd[0]);
-                // execute cmd2
 
                 freeCmdLines(parsedCmdLine);
                 parsedCmdLine=parseCmdLines(cmd2);
                 if (parsedCmdLine->inputRedirect==NULL){
-                    printf ("\t@@DEBUG2@@\n");          //DEBUG~~~~
 
-                    fprintf(stderr, "(child1>going to execute cmd: %s)\n",cmd2);
+                    // fprintf(stderr, "(child1>going to execute cmd: %s)\n",cmd2);
                     int execReturnVal = execute(parsedCmdLine);
                     if (execReturnVal == -1) {
                         _exit(EXIT_FAILURE);
@@ -234,44 +220,17 @@ int main(int argc, char **argv) {
                 if (debugMode) {
                     printDebugInfo(child2_pid, parsedCmdLine->arguments[0]);
                 }
-                // Step 7: in parent process
-                // close the read end of the pipe
+            // ~~PARENT~~~:
                 close(pipefd[0]);
-                fprintf(stderr, "(parent_process>closing the read end of the pipe...)\n");
+                // fprintf(stderr, "(parent_process>closing the read end of the pipe...)\n");
             }
 
-            // Step 8: wait for child processes to terminate
-            fprintf(stderr, "(parent_process>waiting for child processes to terminate...)\n");
+            // fprintf(stderr, "(parent_process>waiting for child processes to terminate...)\n");
             waitpid(child1_pid, NULL, 0);
             waitpid(child2_pid, NULL, 0);
 
-            // before exiting
-            fprintf(stderr, "(parent_process>exiting...)\n");
+            // fprintf(stderr, "(parent_process>exiting...)\n");
 
-
-
-
-
-            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            // if (pid == 0) { // child process
-            //     int execReturnVal = execute(parsedCmdLine);
-            //     if (execReturnVal == -1) {
-            //         _exit(EXIT_FAILURE);
-            //     }
-            //     exit(0);
-            // } else if (pid > 0) { // parent process
-            //     if (debugMode) {
-            //         printDebugInfo(pid, parsedCmdLine->arguments[0]);
-            //     }
-            //     freeCmdLines(parsedCmdLine);
-            //     if (parsedCmdLine->blocking) {
-            //         waitpid(pid, NULL, 0);
-            //     }
-            // } else { // fork failed
-            //     perror("fork failed");
-            //     freeCmdLines(parsedCmdLine);
-            //     exit(EXIT_FAILURE);
-            // }
             }
         }
             freeCmdLines(parsedCmdLine);
