@@ -10,9 +10,6 @@
 
 #define FREE(X) if(X) free((void*)X)
 
-/*  global vars for debug */
-int procsCounter=0;   //debug counter for freeing procs
-
 static char *cloneFirstWord(char *str)
 {
     char *start = NULL;
@@ -161,19 +158,13 @@ cmdLine *parseCmdLines(const char *strLine)
 		last->idx = idx++;
 			
 	FREE(line);
-  // procsCounter++;
 	return head;
 }
 
 
 void freeCmdLines(cmdLine *pCmdLine)
 {
-  // procsCounter--;
-  // if(procsCounter<0){
-  //     printf("\t Extra Freeing Found!!! FREEing cmdLine: %s, inpRed is: %s, outpRed is: %s\n",pCmdLine->arguments[0],pCmdLine->inputRedirect,pCmdLine->outputRedirect);
-  //     return;
-  // }
-  printf("\t FREEing cmdLine: %s, inpRed is: %s, outpRed is: %s\n",pCmdLine->arguments[0],pCmdLine->inputRedirect,pCmdLine->outputRedirect);
+  // printf("\t FREEing cmdLine: %s, inpRed is: %s, outpRed is: %s\n",pCmdLine->arguments[0],pCmdLine->inputRedirect,pCmdLine->outputRedirect);
   int i;
   if (!pCmdLine)
     return;

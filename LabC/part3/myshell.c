@@ -10,69 +10,42 @@
 #define TERMINATED -1
 #define RUNNING 1
 #define SUSPENDED 0
-// #define HISTLEN 20
 
 int iprocsCounter=0;       //for freeing
 
 typedef struct process{
-    cmdLine* cmd; /* the parsed command line*/
-    pid_t pid; /* the process id that is running the command*/
-    int status; /* status of the process: RUNNING/SUSPENDED/TERMINATED */
-    struct process *next; /* next process in chain */
+    cmdLine* cmd; 
+    pid_t pid;
+    int status;
+    struct process *next;
 } process;
-
 
 
 void addProcess(process** process_list, cmdLine* cmd, pid_t pid){
     iprocsCounter++;
     process* newProcess = malloc(sizeof(struct process));
-    printf("\t~~DEBUG:~~ at AddProccess: allocated proc is: %d\n",pid); //DEBUG!!!
     newProcess->cmd = cmd;
     newProcess->pid = pid;
-    newProcess->next = NULL;
     newProcess->status = RUNNING;
-    if(cmd->blocking){  // || cmd->next
+    if(cmd->blocking){  
         newProcess->status = TERMINATED;
     }
-    if(*process_list == NULL){
-        *process_list = newProcess;
-    } else {
-        process* curr = *process_list;
-        while(curr->next != NULL){
-            curr = curr->next;
-        }
-        curr->next = newProcess;
-    }
+    newProcess->next = *process_list; 
+    *process_list = newProcess; 
 }
 
 
-void freeProcessList(process** process_list) {      //like in the virusList
+void freeProcessList(process* process_list) {
+    process* current = process_list;
+    process* next;
     
-    process* curr = *process_list;
-    while (curr != NULL) {
-        iprocsCounter--;
-        if(iprocsCounter<=0)break;;
-        printf("\n\t~~DEBUG:~~ 1 at FreeProccessList\n\n"); //DEBUG!!!
-        process* temp = curr;
-        printf("\n\t~~DEBUG:~~ 2 at FreeProccessList\n\n"); //DEBUG!!!
-        curr = curr->next;
-        printf("\n\t~~DEBUG:~~ 3 at FreeProccessList\n\n"); //DEBUG!!!
-        
-        printf("\n\t~~DEBUG:~~ at FreeProccessList - freed proccess is- %d\n\n",curr->pid); //DEBUG!!!
-        freeCmdLines(temp->cmd);
-        free(temp);
+    while (current != NULL) {
+        next = current->next;
+        freeCmdLines(current->cmd);
+        free(current);
+        current = next;
     }
-    *process_list = NULL;
 }
-
-
-// void freeProcessList(process* process_list){
-//     if(process_list != NULL){
-//         freeProcessList(process_list->next);
-//         freeCmdLines(process_list->cmd);
-//         free(process_list);
-//     }
-// }
 
 void updateProcessStatus(process* process_list, int pid, int status){
     process* curr = process_list;
@@ -84,6 +57,7 @@ void updateProcessStatus(process* process_list, int pid, int status){
         curr = curr->next;
     }
 }
+
 
 void updateProcessList(process **process_list){     //ref - example on https://linux.die.net/man/2/waitpid
     pid_t pid;
@@ -107,33 +81,33 @@ void updateProcessList(process **process_list){     //ref - example on https://l
     }
 }
 
+
+
+
 void removeTermiantedProcs(process** process_list){
     process* curr = *process_list;
     process* prev = *process_list;
     while(curr != NULL){
-        if(curr->status == TERMINATED){
-
-            if(prev == curr&& curr->cmd!=NULL){
-                *process_list = (*process_list)->next;
-                printf("\t~~DEBUG~~ in RemovedTerminatedProcs#prev=curr#before - handling cmd: %s\n",curr->cmd->arguments[0]);
-                freeCmdLines(curr->cmd);
-                printf("\t~~DEBUG~~ in RemovedTerminatedProcs#prev=curr#after - handling cmd: %s\n",curr->cmd->arguments[0]);
-                free(curr);
-                curr = *process_list;
-                prev = *process_list;
-            } else {
+        if(curr->status != TERMINATED){
+            prev = curr;
+            curr = curr->next;
+        } else {
+            if(prev != curr || curr->cmd==NULL){
                 prev->next = curr->next;
-                printf("\t~~DEBUG~~ in RemovedTerminatedProcs#else# - handling cmd: %s\n",curr->cmd->arguments[0]);
                 freeCmdLines(curr->cmd);
                 free(curr);
                 curr = prev->next;
+            } else {
+                *process_list = (*process_list)->next;
+                freeCmdLines(curr->cmd);
+                free(curr);
+                curr = *process_list;
+                prev = *process_list;
             }
-        } else {
-            prev = curr;
-            curr = curr->next;
         }
     }
 }
+
 
 void printProcessList(process** process_list) {
     printf("PID\tCommand\t\t\tSTATUS\n");
@@ -155,20 +129,7 @@ void printProcessList(process** process_list) {
     removeTermiantedProcs(process_list);
 }
 
-// void printProcessList(process** process_list){
-//     updateProcessList(process_list);
-//     process* curr = *process_list;
-//     printf("PID\tCommand\tSTATUS\n");
-//     while(curr != NULL){
-//         char* status = "RUNNING";
-//         if(curr->status == TERMINATED) status = "TERMINATED";
-//         if(curr->status == SUSPENDED) status = "SUSPENDED";
-//         printf("%d\t%s\t%s\n", curr->pid, curr->cmd->arguments[0], status);
-//         curr = curr->next;
-//     }     
-//     //after printing - remove the ones terminated  
-//     removeTermiantedProcs(process_list);
-// }
+
 
 int execute(cmdLine *pCmdLine) {
     // printf("\t~~DEBUG:~~ cmd is: %s\n",pCmdLine->arguments[0]); //DEBUG!!!
@@ -205,7 +166,6 @@ int execute(cmdLine *pCmdLine) {
 
 
 
-
 void printDebugInfo(pid_t pid, char* command) {
     fprintf(stderr, "PID: %d\n", pid);
     fprintf(stderr, "Executing command: %s\n", command);
@@ -217,11 +177,14 @@ void handleSignal(int signal) {
 
 //global vars:
 struct process* process_list = NULL;
-int debug = 0;
 int HISTLEN = 20;
 
 
-//~~~~~~~~~~ main - definitions ~~~~~~~~~~~
+void atExitStuff(){
+    freeProcessList(process_list);
+}
+
+//~~~~~~~~~~ main  ~~~~~~~~~~~
 
 int main(int argc, char *argv[]){
     int maxInputSize = 2048;
@@ -237,25 +200,16 @@ int main(int argc, char *argv[]){
     char history[HISTLEN][maxInputSize];
     int newest = 0;
     int oldest = 0;
-    int historySize = 0;
+    int currHistLen = 0;
 
     
-    // char cwd[PATH_MAX];
-    // char input[2048];
-    // struct cmdLine *parsedCmdLine;
-    // for(int i=0; i<argc; i++){
-	// 	if(strcmp(argv[i],"-d") == 0)
-	// 		debug = 1;
-	// }
 //~~~~~~~~~~ main - loop while ~~~~~~~~~~~
 
     while(1){
-        // int shouldFree = 1;
         getcwd(input, maxInputSize);
         printf("%s$>>: ", input);
         fgets(input, maxInputSize, stdin);
         if (*input==10){
-            //  printf("\t\t im here DEBUG!\n");
              continue;
         }
         parsedCmdLine = parseCmdLines(input);
@@ -263,82 +217,55 @@ int main(int argc, char *argv[]){
 
         if (strcmp(parsedCmdLine->arguments[0], "quit") == 0) {
             freeCmdLines(parsedCmdLine);
-            if(process_list) freeProcessList(&process_list);
-            printf("\n\n~~DEBUG~~ when quitting, procsCounter is %d\n\n",iprocsCounter);
+            if(process_list) freeProcessList(process_list);
             exit(0);
         }
-
-
-
-
-
-
-
-        // if(getcwd(cwd, PATH_MAX) == 0) //print cwd
-        //     return 1;
-        // printf("%s$ ", cwd);
-
-        // fgets(input,2048,stdin);
-
-
-        // if(strncmp("quit",input,4) == 0){ //end inf loop with "quit"
-        //     freeProcessList(process_list);
-        //     exit(0);
-        // }
-
         //~~~~~~~~~~` HISTORY stuff - start ~~~~~~~~~~~~
 
         if(strcmp(parsedCmdLine -> arguments[0],"history") ==0){
-            for(int i = 0; i < historySize; i++){
-                printf("%d) %s", i + 1, history[(oldest + i) % HISTLEN]);
+            for(int i = 0; i < currHistLen; i++){
+                printf("[%d] %s", i + 1, history[(oldest + i) % HISTLEN]);
             }
             freeCmdLines(parsedCmdLine);        //i cleaned freeCmdLines!
             continue;
         }
         else if(strcmp(parsedCmdLine -> arguments[0],"!!") ==0){
             freeCmdLines(parsedCmdLine);
-            if(historySize < 1){
-                fprintf(stderr, "History is empty!\n");
-                continue;
-            } else {
+            if(currHistLen >0){
                 parsedCmdLine = parseCmdLines(history[(newest-1 + HISTLEN) % HISTLEN]);
+            } else {
+                fprintf(stderr, "No history yet!\n");
+                continue;
             }
         }
         else if(parsedCmdLine -> arguments[0][0] == '!'){
             int index = atoi(parsedCmdLine -> arguments[0]+1) - 1;
             freeCmdLines(parsedCmdLine);
-            if(index >= historySize || index < 0){
-                fprintf(stderr, "index %d is out of bound %d!\n", index, historySize);
-                continue;
-            } else {
+            
+            if(0 < index && index <currHistLen){
                 parsedCmdLine = parseCmdLines(history[(oldest + index + HISTLEN) % HISTLEN]);
+            } else {
+                fprintf(stderr, "index %d out of range (1~%d), no such entry yet!\n", index, currHistLen);
+                continue;
             }
         }
         else {
             strcpy(history[newest], input);
             newest = (newest + 1) % HISTLEN;
-            if(historySize == HISTLEN){
-                oldest = (oldest + 1) % HISTLEN;
+            if(currHistLen != HISTLEN){
+                currHistLen++;
             } else {
-                historySize++;
+                oldest = (oldest + 1) % HISTLEN;
             }
         }
 
         //~~~~~~~~~~` HISTORY stuff - end ~~~~~~~~~~~~
         
         
-        //~~~~~~~~~~` pipe stuff - start ~~~~~~~~~~~~
-        // if(parsedCmdLine->next !=NULL){
-        //     makePipe(parsedCmdLine);
-        //     shouldFree = 0;
-        // }
-        //~~~~~~~~~~` pipe stuff - end ~~~~~~~~~~~~
-
         if (strcmp(parsedCmdLine->arguments[0], "cd") == 0) {
             if (chdir(parsedCmdLine->arguments[1]) == -1) {
                 fprintf(stderr, "cd: %s: No such file or directory\n", parsedCmdLine->arguments[1]);
             }
-            // freeCmdLines(parsedCmdLine);
             continue;
         }
         signal(SIGTSTP, handleSignal);
@@ -347,12 +274,6 @@ int main(int argc, char *argv[]){
 
         if (strcmp(parsedCmdLine->arguments[0], "procs") == 0) {
             printProcessList(&process_list);
-
-        // int pid = atoi(parsedCmdLine->arguments[1]);
-        // if (kill(pid, SIGTSTP) == -1) {
-        //     perror("Failed to suspend process");
-        //     }
-        //     // freeCmdLines(parsedCmdLine);
             continue;
         }
         if (strcmp(parsedCmdLine->arguments[0], "suspend") == 0) {
@@ -360,46 +281,23 @@ int main(int argc, char *argv[]){
         if (kill(pid, SIGTSTP) == -1) {
             perror("Failed to suspend process");
             }
-            // freeCmdLines(parsedCmdLine);
+
         continue;
         } else if (strcmp(parsedCmdLine->arguments[0], "wake") == 0) {
             int pid = atoi(parsedCmdLine->arguments[1]);
             if (kill(pid, SIGCONT) == -1) {
             perror("Failed to wake up process");
         }
-            // freeCmdLines(parsedCmdLine);
+
         continue;
         } else if (strcmp(parsedCmdLine->arguments[0], "kill") == 0) {
             int pid = atoi(parsedCmdLine->arguments[1]);
             if (kill(pid, SIGKILL) == -1) {
             perror("Failed to kill process");
         }
-            // freeCmdLines(parsedCmdLine);
+
         continue;
         }
-
-
-
-        // else if(strcmp(parsedCmdLine -> arguments[0],"cd") ==0){
-        //     cd(parsedCmdLine);        }
-        // else if(strcmp(parsedCmdLine -> arguments[0],"wake") ==0){
-        //     kill(atoi(parsedCmdLine -> arguments[1]),SIGCONT);
-        // }
-        // else if(strcmp(parsedCmdLine -> arguments[0],"suspend") ==0){
-        //     kill(atoi(parsedCmdLine -> arguments[1]),SIGTSTP);
-        // }
-        // else if(strcmp(parsedCmdLine -> arguments[0],"kill") ==0) {
-        //     kill(atoi(parsedCmdLine -> arguments[1]),SIGINT);
-        // } else if(strcmp(parsedCmdLine -> arguments[0],"procs") ==0) {
-        //     printProcessList(&process_list);
-        // }
-
-
-
-
-
-//$$$$$$$$$$$$$ CONTINIUE FROM HERE! $$$$$$$$$$$$$$$$$
-
 
 char* cmd1 = strtok(input, "|");
         char* cmd2 = strtok(NULL, "|");
@@ -473,7 +371,6 @@ char* cmd1 = strtok(input, "|");
                 }
 
                 close(pipefd[1]);
-                // addProcess(&process_list, parsedCmdLine, child1_pid);
 
                 // fprintf(stderr, "(parent_process>closing the write end of the pipe...)\n");
             }
@@ -524,36 +421,13 @@ char* cmd1 = strtok(input, "|");
             // fprintf(stderr, "(parent_process>exiting...)\n");
 
             }
-            // freeCmdLines(parsedCmdLine);
             if(!parsedCmdLine) freeCmdLines(parsedCmdLine);
         }
-    freeProcessList(&process_list);
+    freeProcessList(process_list);
+
+    if (atexit(atExitStuff) != 0) {
+            printf("\n\n nothing to do at exit \n\n");
+    }
 }
 
 
-
-
-
-
-//         else {
-//             //we create child process before execute
-//             shouldFree = 0;
-//             int pid = fork();
-//             if(pid != 0){// this is a parent
-//                 if((*parsedCmdLine).blocking != 0){ // if no &, we wait for child
-//                     waitpid(pid, NULL, 0);
-//                 }
-//                 addProcess(&process_list, parsedCmdLine, pid);
-//             }else{ // this is a child
-//                 execute(parsedCmdLine); // DELETED CALL TO EXECUTE
-//             }
-//             if(debug == 1){
-//                 fprintf(stderr,"PID: %d\n",pid);
-//                 fprintf(stderr,"Executing command: %s\n",(*parsedCmdLine).arguments[0]);
-//             }
-//         }
-//         if(shouldFree)
-//             freeCmdLines(parsedCmdLine);
-//     }
-//     return 0;
-// }
