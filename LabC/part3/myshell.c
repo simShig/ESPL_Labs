@@ -12,6 +12,7 @@
 #define SUSPENDED 0
 // #define HISTLEN 20
 
+int iprocsCounter=0;       //for freeing
 
 typedef struct process{
     cmdLine* cmd; /* the parsed command line*/
@@ -23,8 +24,9 @@ typedef struct process{
 
 
 void addProcess(process** process_list, cmdLine* cmd, pid_t pid){
-    // printf("\t~~DEBUG:~~ at AddProccess: cmd is: %s\n",cmd->arguments[0]); //DEBUG!!!
+    iprocsCounter++;
     process* newProcess = malloc(sizeof(struct process));
+    printf("\t~~DEBUG:~~ at AddProccess: allocated proc is: %d\n",pid); //DEBUG!!!
     newProcess->cmd = cmd;
     newProcess->pid = pid;
     newProcess->next = NULL;
@@ -46,12 +48,17 @@ void addProcess(process** process_list, cmdLine* cmd, pid_t pid){
 
 void freeProcessList(process** process_list) {      //like in the virusList
     
-    printf("\t~~DEBUG:~~ at FreeProccessList\n"); //DEBUG!!!
-
     process* curr = *process_list;
     while (curr != NULL) {
+        iprocsCounter--;
+        if(iprocsCounter<=0)break;;
+        printf("\n\t~~DEBUG:~~ 1 at FreeProccessList\n\n"); //DEBUG!!!
         process* temp = curr;
+        printf("\n\t~~DEBUG:~~ 2 at FreeProccessList\n\n"); //DEBUG!!!
         curr = curr->next;
+        printf("\n\t~~DEBUG:~~ 3 at FreeProccessList\n\n"); //DEBUG!!!
+        
+        printf("\n\t~~DEBUG:~~ at FreeProccessList - freed proccess is- %d\n\n",curr->pid); //DEBUG!!!
         freeCmdLines(temp->cmd);
         free(temp);
     }
@@ -82,18 +89,18 @@ void updateProcessList(process **process_list){     //ref - example on https://l
     pid_t pid;
     int status;
     while((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED )) > 0){      //from waitflags.h: 
-        if(WIFSTOPPED(status)){
+        if(WIFSTOPPED(status)){     //suspended
             updateProcessStatus(*process_list, pid, SUSPENDED);
         } 
-        if(WIFCONTINUED(status)){
+        if(WIFCONTINUED(status)){       //waken
+            // printf("\t~~DEBUG!!~~im in ifTerminated /ifcontinued - cmd id is: %d \n",pid);
             updateProcessStatus(*process_list, pid, RUNNING);
         } 
         if(WIFEXITED(status) ){       // exited 
-            printf("\t~~DEBUG!!~~im in ifTerminated - cmd id is: %d \n",pid);
+            // printf("\t~~DEBUG!!~~im in ifTerminated - cmd id is: %d \n",pid);
             updateProcessStatus(*process_list, pid, TERMINATED);
         } 
         if(WIFSIGNALED(status) ){       // killed    
-            printf("\t~~DEBUG!!~~im in ifTerminated - cmd id is: %d \n",pid);
             updateProcessStatus(*process_list, pid, TERMINATED);
         } 
 
@@ -105,14 +112,18 @@ void removeTermiantedProcs(process** process_list){
     process* prev = *process_list;
     while(curr != NULL){
         if(curr->status == TERMINATED){
-            if(prev == curr){
+
+            if(prev == curr&& curr->cmd!=NULL){
                 *process_list = (*process_list)->next;
+                printf("\t~~DEBUG~~ in RemovedTerminatedProcs#prev=curr#before - handling cmd: %s\n",curr->cmd->arguments[0]);
                 freeCmdLines(curr->cmd);
+                printf("\t~~DEBUG~~ in RemovedTerminatedProcs#prev=curr#after - handling cmd: %s\n",curr->cmd->arguments[0]);
                 free(curr);
                 curr = *process_list;
                 prev = *process_list;
             } else {
                 prev->next = curr->next;
+                printf("\t~~DEBUG~~ in RemovedTerminatedProcs#else# - handling cmd: %s\n",curr->cmd->arguments[0]);
                 freeCmdLines(curr->cmd);
                 free(curr);
                 curr = prev->next;
@@ -160,7 +171,7 @@ void printProcessList(process** process_list) {
 // }
 
 int execute(cmdLine *pCmdLine) {
-    printf("\t~~DEBUG:~~ cmd is: %s\n",pCmdLine->arguments[0]); //DEBUG!!!
+    // printf("\t~~DEBUG:~~ cmd is: %s\n",pCmdLine->arguments[0]); //DEBUG!!!
     int execReturnVal;
 
     if (pCmdLine->inputRedirect != NULL) {
@@ -193,95 +204,6 @@ int execute(cmdLine *pCmdLine) {
 }
 
 
-
-// //receives a parsed line and invokes the program specified in the cmdLine using the proper system call.
-// void execute(cmdLine *pCmdLine){
-//     if(pCmdLine -> inputRedirect){
-//         fclose(stdin);
-//         if(fopen(pCmdLine ->inputRedirect,"r") == NULL){
-//             perror("Execution FAILED");
-//             _exit(1);
-//         }
-//     }
-
-//     if(pCmdLine -> outputRedirect){
-//         fclose(stdout);
-//         if(fopen(pCmdLine ->outputRedirect,"w") == NULL){
-//             perror("Execution FAILED");
-//             _exit(1);
-//         }
-//     }
-//     char *command = (*pCmdLine).arguments[0];
-//     if(execvp(command,(*pCmdLine).arguments) == -1){ // executing command + display error if execv failed.
-//         perror("Execution FAILED");
-//         _exit(1);
-//     }
-// }
-
-// void cd(cmdLine *pCmdLine){
-//     chdir(pCmdLine -> arguments[1]);
-// }
-
-// void makePipe(cmdLine *parsedCmdLine){
-//     int pipefd[2]; // 0 read 1 write
-//     pid_t pid1, pid2;
-//     if(parsedCmdLine->outputRedirect || parsedCmdLine->next->inputRedirect){ // redirection
-//         fprintf(stderr, "Invalid redirection\n");
-//         return;
-//     }
-//     if (pipe(pipefd) == -1) {
-//         perror("Failed to pipe");
-//         _exit(-1);
-//     }
-
-//     pid1 = fork();
-//     if (pid1 == 0) { // child 1 process
-//         close(STDOUT_FILENO); // close standard output
-//         dup(pipefd[1]); // duplicate write-end of pipe
-//         close(pipefd[1]); // close write-end of pipe
-
-//         if(parsedCmdLine -> inputRedirect){ // redirection
-//         fclose(stdin);
-//             if(fopen(parsedCmdLine ->inputRedirect,"r") == NULL){
-//                 perror("Execution FAILED");
-//                 _exit(1);
-//             }
-//         }
-//         if(execvp(parsedCmdLine->arguments[0],parsedCmdLine->arguments) == -1){ // executing command + display error if execv failed.
-//             perror("Execution FAILED");
-//             _exit(1);
-//         }
-//     }else { // parent process
-//         close(pipefd[1]);
-//         if(parsedCmdLine->next !=NULL){
-//             pid2 = fork();
-//             if (pid2 == 0) { // child 2 process
-//                 close(STDIN_FILENO);
-//                 dup(pipefd[0]);
-//                 close(pipefd[0]);
-
-//                 if(parsedCmdLine->next -> outputRedirect){ // redirection
-//                     fclose(stdout);
-//                     if(fopen(parsedCmdLine->next ->outputRedirect,"w") == NULL){
-//                         perror("Execution FAILED");
-//                         _exit(1);
-//                     }
-//                 }
-//                 if(execvp(parsedCmdLine->next->arguments[0],parsedCmdLine->next->arguments) == -1){ // executing command + display error if execv failed.
-//                     perror("Execution FAILED");
-//                     _exit(1);
-//                 }
-
-//             } else {
-//                 close(pipefd[0]);
-//                 addProcess(&process_list, parsedCmdLine, pid1);
-//                 waitpid(pid1, NULL, 0);
-//                 waitpid(pid2, NULL, 0);
-//             }
-//         }
-
-//     }
-// }
 
 
 void printDebugInfo(pid_t pid, char* command) {
@@ -333,7 +255,7 @@ int main(int argc, char *argv[]){
         printf("%s$>>: ", input);
         fgets(input, maxInputSize, stdin);
         if (*input==10){
-             printf("\t\t im here DEBUG!\n");
+            //  printf("\t\t im here DEBUG!\n");
              continue;
         }
         parsedCmdLine = parseCmdLines(input);
@@ -341,6 +263,8 @@ int main(int argc, char *argv[]){
 
         if (strcmp(parsedCmdLine->arguments[0], "quit") == 0) {
             freeCmdLines(parsedCmdLine);
+            if(process_list) freeProcessList(&process_list);
+            printf("\n\n~~DEBUG~~ when quitting, procsCounter is %d\n\n",iprocsCounter);
             exit(0);
         }
 
@@ -600,9 +524,9 @@ char* cmd1 = strtok(input, "|");
             // fprintf(stderr, "(parent_process>exiting...)\n");
 
             }
-            freeCmdLines(parsedCmdLine);
+            // freeCmdLines(parsedCmdLine);
+            if(!parsedCmdLine) freeCmdLines(parsedCmdLine);
         }
-    
     freeProcessList(&process_list);
 }
 
