@@ -1,0 +1,2 @@
+	~~DEBUG:~~ cmd is: cat
+blah blah bllllbbbaa

@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "lineparser.h": "c"
+        "lineparser.h": "c",
+        "errno.h": "c"
     }
 }
