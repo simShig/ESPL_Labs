@@ -277,7 +277,6 @@ int main(int argc, char *argv[]){
         if (strcmp(parsedCmdLine->arguments[0], "procs") == 0) {
             printProcessList(&process_list);
             freeCmdLines(parsedCmdLine);    //added
-
             continue;
         }
         if (strcmp(parsedCmdLine->arguments[0], "suspend") == 0) {
@@ -286,7 +285,6 @@ int main(int argc, char *argv[]){
             perror("Failed to suspend process");
             }
         freeCmdLines(parsedCmdLine);    //added
-
         continue;
         } else if (strcmp(parsedCmdLine->arguments[0], "wake") == 0) {
             int pid = atoi(parsedCmdLine->arguments[1]);
@@ -294,7 +292,6 @@ int main(int argc, char *argv[]){
             perror("Failed to wake up process");
         }
         freeCmdLines(parsedCmdLine);    //added
-
         continue;
         } else if (strcmp(parsedCmdLine->arguments[0], "kill") == 0) {
             int pid = atoi(parsedCmdLine->arguments[1]);
@@ -302,7 +299,6 @@ int main(int argc, char *argv[]){
             perror("Failed to kill process");
         }
         freeCmdLines(parsedCmdLine);    //added
-
         continue;
         }
 
