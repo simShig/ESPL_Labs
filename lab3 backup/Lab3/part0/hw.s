@@ -1,4 +1,4 @@
-section .data
+section .rodata
     hello db 'hello world',0xA ; define the string to be printed and add linefeed character
 
 section .text
