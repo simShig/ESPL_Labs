@@ -242,7 +242,7 @@ int main(int argc, char *argv[]){
             int index = atoi(parsedCmdLine -> arguments[0]+1) - 1;
             freeCmdLines(parsedCmdLine);
             
-            if(0 < index && index <currHistLen){
+            if(0 <= index && index <currHistLen){
                 parsedCmdLine = parseCmdLines(history[(oldest + index + HISTLEN) % HISTLEN]);
             } else {
                 fprintf(stderr, "index %d out of range (1~%d), no such entry yet!\n", index, currHistLen);
