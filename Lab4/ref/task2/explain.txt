@@ -1,0 +1,7 @@
+-s to find  _start is at 08048156 and is at index 8 of the table
+-h to find entry point is at 804816c (running the file doesnt run _start)
+-S to find symbol table at offset 208
+each entry is 16 bytes so 0x208 + 16 * 8 = 288
+skip 4 byte index, we read at 0x28c for length of 4 (address size)
+entery point is at 0x18
+write _start address to 0x18

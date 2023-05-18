@@ -1,0 +1,5 @@
+-s to find main address,length and section (0x0804841d, 23, 13)
+-S to find sections address and offset (0x08048320, 0x320)
+main offset = 0x0804841d - 0x08048320 + 0x320 = 0x41d
+
+to fix either read 22 from nopfile and write to main or write ret (c3) to main

@@ -1,0 +1,10 @@
+-s to find digit_count func address, length and section (0x000011cd, 84, 16)
+-S to find section offset (same as address, just use func address)
+
+in ntsc
+-s to find digit_count func address, length and section (0x577, 1136, 14)
+-S to find section offset (same as address, just use func address)
+
+
+read function digit_count func at 11cd length 84
+write to digit_cnt at 577 length 84
