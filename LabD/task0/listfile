@@ -1,0 +1,36 @@
+     1                                  global _start
+     2                                  extern printf
+     3                                  
+     4                                  section .text
+     5                                  _start:
+     6 00000000 55                          push ebp
+     7 00000001 89E5                        mov ebp, esp
+     8                                  
+     9 00000003 FF7508                      push dword[ebp+8] ;argc
+    10 00000006 E8(00000000)                call printf 
+    11                                  
+    12 0000000B 8B7500                      mov esi, [ebp]
+    13 0000000E 8B5E0C                      mov ebx, [esi +12]
+    14 00000011 FF33                        push dword[ebx]
+    15 00000013 E8(00000000)                call printf
+    16                                  
+    17 00000018 B800000000                  mov eax, 0
+    18 0000001D 89EC                        mov esp, ebp
+    19 0000001F 5D                          pop ebp
+    20 00000020 C3                          ret
+    21                                  
+    22                                  
+    23                                  
+    24                                  
+    25                                  
+    26                                  
+    27                                  
+    28                                  
+    29                                  
+    30                                  
+    31                                  
+    32                                  
+    33                                  
+    34                                  
+    35                                  
+    36                                  
