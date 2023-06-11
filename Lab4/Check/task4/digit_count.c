@@ -1,10 +1,10 @@
 #include <stdio.h>
 
 
-int main(int argc, char **argv){
+void digit_count(char* input){
     int counter = 0;
     int i = 0;
-    char* str = argv[1];
+    char* str = input;
     while (str[i] != '\0')
     {
         if (str[i] >= '0' && str[i] <= '9')
@@ -15,4 +15,8 @@ int main(int argc, char **argv){
     }                   
     printf("%d\n",counter);
     return 0;
+}
+
+int main(int argc, char **argv){
+    digit_count(argv[1]);
 }
