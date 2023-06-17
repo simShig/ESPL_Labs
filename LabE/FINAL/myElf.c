@@ -1,5 +1,7 @@
 #define _FILE_OFFSET_BITS 64    //refferance : https://stackoverflow.com/questions/13893580/calling-stat-from-sys-stat-h-faills-with-value-too-large-for-defined-data-typ
 #include <stdio.h>
+#include <stdbool.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <elf.h>
 #include <string.h>
@@ -13,6 +15,140 @@ typedef struct {
   char *name;
   void (*fun)();
 }fun_desc;
+
+// Structure to represent a symbol
+typedef struct {
+    char* name;
+    bool is_undefined;
+    bool is_defined;
+    unsigned int st_name;
+    unsigned char st_info;
+    unsigned char st_other;
+    unsigned short st_shndx;
+    unsigned long st_value;
+    unsigned long st_size;
+} Symbol;
+
+// Structure to represent a symbol table
+typedef struct {
+    Symbol* symbols;
+    int num_symbols;
+} SymbolTable;
+
+
+// Structure to represent the ELF header
+typedef struct {
+    // Fields needed for the merged ELF file
+    char e_ident[16];
+    unsigned short e_type;
+    unsigned short e_machine;
+    unsigned int e_version;
+    unsigned long e_entry;
+    unsigned long e_phoff;
+    unsigned long e_shoff;
+    unsigned int e_flags;
+    unsigned short e_ehsize;
+    unsigned short e_phentsize;
+    unsigned short e_phnum;
+    unsigned short e_shentsize;
+    unsigned short e_shnum;
+    unsigned short e_shstrndx;
+} ElfHeader;
+
+// Structure to represent a section header
+typedef struct {
+    unsigned int sh_name;
+    unsigned int sh_type;
+    unsigned long sh_flags;
+    unsigned long sh_addr;
+    unsigned long sh_offset;
+    unsigned long sh_size;
+    unsigned int sh_link;
+    unsigned int sh_info;
+    unsigned long sh_addralign;
+    unsigned long sh_entsize;
+} SectionHeader;
+
+
+
+
+// Function to merge two ELF files
+void MergeELF(const char* file1, const char* file2, const char* output) {
+    // Open the input ELF files
+    FILE* elf1 = fopen(file1, "rb");
+    FILE* elf2 = fopen(file2, "rb");
+
+    // Create the output ELF file
+    FILE* mergedElf = fopen(output, "wb");
+
+    // Read the ELF header of the first file
+    ElfHeader header1;
+    fread(&header1, sizeof(ElfHeader), 1, elf1);
+
+    // Write the ELF header to the merged ELF file
+    fwrite(&header1, sizeof(ElfHeader), 1, mergedElf);
+
+    // Read the section header table of the first file
+    SectionHeader* sectionHeaders1 = (SectionHeader*)malloc(sizeof(SectionHeader) * header1.e_shnum);
+    fseek(elf1, header1.e_shoff, SEEK_SET);
+    fread(sectionHeaders1, sizeof(SectionHeader), header1.e_shnum, elf1);
+
+    // Loop over the section headers and process each section
+    for (int i = 0; i < header1.e_shnum; i++) {
+        SectionHeader sectionHeader = sectionHeaders1[i];
+
+        // Concatenate .text, .data, .rodata sections from both files
+        if (strcmp(".text", (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0 ||
+            strcmp(".data", (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0 ||
+            strcmp(".rodata", (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0) {
+
+            // Write the section contents from the first file
+            fseek(elf1, sectionHeader.sh_offset, SEEK_SET);
+            for (int j = 0; j < sectionHeader.sh_size; j++) {
+                fputc(fgetc(elf1), mergedElf);
+            }
+
+            // Find the corresponding section in the second file
+            SectionHeader sectionHeader2;
+            for (int j = 0; j < header1.e_shnum; j++) {
+                if (strcmp((char*)(sectionHeaders1 + sectionHeaders1[j].sh_name),
+                           (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0) {
+                    sectionHeader2 = sectionHeaders1[j];
+                    break;
+                }
+            }
+
+            // Write the section contents from the second file
+            fseek(elf2, sectionHeader2.sh_offset, SEEK_SET);
+            for (int j = 0; j < sectionHeader2.sh_size; j++) {
+                fputc(fgetc(elf2), mergedElf);
+            }
+
+            // Update the section header size
+            sectionHeader.sh_size += sectionHeader2.sh_size;
+        }
+
+        // Write the modified section header to the merged ELF file
+        fseek(mergedElf, header1.e_shoff + (sizeof(SectionHeader) * i), SEEK_SET);
+        fwrite(&sectionHeader, sizeof(SectionHeader), 1, mergedElf);
+    }
+
+    // Close the input ELF files
+    fclose(elf1);
+    fclose(elf2);
+
+    // Update the e_shoff field in the ELF header
+    fseek(mergedElf, offsetof(ElfHeader, e_shoff), SEEK_SET); ///gpt wrote this line, what do i need to write instead of "offsetof(ElfHeader, e_shoff)"?
+    fwrite(&header1.e_shoff, sizeof(unsigned long), 1, mergedElf);
+
+    // Close the merged ELF file
+    fclose(mergedElf);
+
+    // Free the allocated memory
+    free(sectionHeaders1);
+}
+
+
 
 int menu_size = 6;
 int debug = 0;
@@ -317,7 +453,7 @@ void relocationTables(){
     } 
 }
 
-void quit(){
+void quit(){ //eden-should close whats open and wxit normally
     if (debug) { printf("quitting\n");}
     exit(0);
 }
@@ -343,6 +479,61 @@ int getOption (){
     printf("\nNot within bounds\n" );
     return -1;
   }
+}
+///eden added:
+// Function to check for symbol merge errors
+void CheckMerge(SymbolTable SYMTAB1, SymbolTable SYMTAB2) {
+    // Check if symbol tables are available
+    if (SYMTAB1.symbols == NULL || SYMTAB2.symbols == NULL) {
+        printf("Error: ELF files not opened and mapped.\n");
+        return;
+    }
+      // Check if there is exactly one symbol table in each ELF file
+    if (SYMTAB1.num_symbols != 1 || SYMTAB2.num_symbols != 1) {
+        printf("Feature not supported: Multiple symbol tables found.\n");
+        return;
+    }
+    Symbol* symbols1 = SYMTAB1.symbols;  // Symbols of SYMTAB1
+    Symbol* symbols2 = SYMTAB2.symbols;  // Symbols of SYMTAB2
+
+    // Loop over symbols in SYMTAB1
+    for (int i = 1; i < SYMTAB1.num_symbols; i++) {
+        Symbol sym = symbols1[i];
+
+        // Check if sym is UNDEFINED
+        if (sym.is_undefined) {
+            bool found_sym = false;
+ // Search for sym in SYMTAB2
+            for (int j = 1; j < SYMTAB2.num_symbols; j++) {
+                if (strcmp(sym.name, symbols2[j].name) == 0) {
+                    found_sym = true;
+
+                    // Check if sym is also UNDEFINED in SYMTAB2
+                    if (symbols2[j].is_undefined) {
+                        printf("Symbol %s undefined\n", sym.name);
+                    }
+                    break;
+                }
+            }
+             // Check if sym is not found in SYMTAB2
+            if (!found_sym) {
+                printf("Symbol %s undefined\n", sym.name);
+            }
+        }
+          // Check if sym is defined
+        else if (sym.is_defined) {
+            // Search for sym in SYMTAB2
+            for (int j = 1; j < SYMTAB2.num_symbols; j++) {
+                if (strcmp(sym.name, symbols2[j].name) == 0) {
+                    // Check if sym is also defined in SYMTAB2
+                    if (symbols2[j].is_defined) {
+                        printf("Symbol %s multiply defined\n", sym.name);
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 int main(int argc, char **argv){
