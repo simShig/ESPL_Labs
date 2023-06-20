@@ -159,6 +159,8 @@ int SecondFd = -1;
 Elf32_Ehdr *header; 
 char* firstFilenameOpen=NULL;
 char* secondFilenameOpen=NULL;
+char filename1[buffLen];
+char filename2[buffLen];
 
 void* mapLocationFirst; /* will point to the location of the memory mapped file */
 void* mapLocationSecond; /* will point to the location of the memory mapped file */
@@ -202,6 +204,7 @@ int LoadFile(int fileNum){
             close(FirstFd);
         FirstFd=fd;
         strcpy((char*)&firstFilenameOpen,(char*)filename);
+        strcpy(filename1, filename);
         return FirstFd;
 
    }
@@ -219,6 +222,7 @@ int LoadFile(int fileNum){
             close(SecondFd);
         SecondFd=fd;
         strcpy((char*)&secondFilenameOpen,(char*)filename);
+        strcpy(filename2, filename);
         return SecondFd;
 
    }else{
@@ -257,8 +261,10 @@ char* dataType(Elf32_Ehdr* header){
 void examineFile(){
     if (FirstFd==-1){               //first file examine
         printf("Enter first file name: ");
-        if(LoadFile(1)==-1)
+        if(LoadFile(1)==-1){
+            // printf("Loading of file: %s Failed!\n",firstFilenameOpen);
             exit(1);
+        }
         header = (Elf32_Ehdr *) mapLocationFirst;
         if(strncmp((char*)header->e_ident,(char*)ELFMAG, 4)==0){ //is elf file?
             printf("Magic:\t\t\t\t %X %X %X\n", header->e_ident[EI_MAG0],header->e_ident[EI_MAG1],header->e_ident[EI_MAG2]);
@@ -278,12 +284,14 @@ void examineFile(){
             FirstFd = -1;
             firstFilenameOpen = NULL;
         }
-    return;
+        return;
     }
     if (SecondFd==-1){               //first file examine
         printf("Enter Second file name: ");
-        if(LoadFile(2)==-1)
+        if(LoadFile(2)==-1){
+            // printf("Loading of file: %s Failed!\n",secondFilenameOpen);
             exit(1);
+        }
         header = (Elf32_Ehdr *) mapLocationSecond;
         if(strncmp((char*)header->e_ident,(char*)ELFMAG, 4)==0){ //is elf file?
             printf("Magic:\t\t\t\t %X %X %X\n", header->e_ident[EI_MAG0],header->e_ident[EI_MAG1],header->e_ident[EI_MAG2]);
@@ -342,14 +350,14 @@ void printSectionNames(){
     else{
     	Elf32_Shdr* sections_table = mapLocationFirst+header->e_shoff;
     	Elf32_Shdr* string_table_entry = mapLocationFirst+header->e_shoff+(header->e_shstrndx*header->e_shentsize); //to get the names
+		fprintf(stderr,"File %s :\n",filename1);        //THE PROBLEMMMMM
 		if(debug){
 			fprintf(stderr,"section table address: %p\n",sections_table);
 			fprintf(stderr,"string table entry: %p\n",string_table_entry);
             printf("[Nr] Name\t\tAddr\t\tOff\tSize\tType\t\toffset(bytes)\n");
         }
 		else{printf("[Nr] Name\t\tAddr\t\tOff\tSize\tType\n");}
-		fprintf(stderr,"File %s :\n",firstFilenameOpen);
-    	for (size_t i = 0; i < header->e_shnum; i++){       
+        for (size_t i = 0; i < header->e_shnum; i++){       
     		Elf32_Shdr* entry = mapLocationFirst+header->e_shoff+(i* header->e_shentsize);     //header->e_shoff+(i* header->e_shentsize) ==> section
         	char* name = mapLocationFirst + string_table_entry->sh_offset + entry->sh_name;
         	printSectionEntry(i,name,entry,header->e_shoff+(i* header->e_shentsize));
@@ -359,13 +367,13 @@ void printSectionNames(){
     if(SecondFd !=-1){
     	Elf32_Shdr* sections_table = mapLocationSecond+header->e_shoff;
     	Elf32_Shdr* string_table_entry = mapLocationSecond+header->e_shoff+(header->e_shstrndx*header->e_shentsize); //to get the names
+		fprintf(stderr,"File %s :\n",filename2);        //THE PROBLEMMMMM
 		if(debug){
 			fprintf(stderr,"section table address: %p\n",sections_table);
 			fprintf(stderr,"string table entry: %p\n",string_table_entry);
             printf("[Nr] Name\t\tAddr\t\tOff\tSize\tType\t\toffset(bytes)\n");
         }
 		else{printf("[Nr] Name\t\tAddr\t\tOff\tSize\tType\n");}
-		fprintf(stderr,"File %s :\n",secondFilenameOpen);
     	for (size_t i = 0; i < header->e_shnum; i++){       
     		Elf32_Shdr* entry = mapLocationSecond+header->e_shoff+(i* header->e_shentsize);     //header->e_shoff+(i* header->e_shentsize) ==> section
         	char* name = mapLocationSecond + string_table_entry->sh_offset + entry->sh_name;
@@ -546,6 +554,15 @@ int main(int argc, char **argv){
     printMenu(menu);
     int option = getOption();
     if (option != -1) { menu[option].fun(); }
+                //for debugging:
+                
+        // if(firstFilenameOpen!=NULL){
+        //     printf("check check \n");
+        //     printf("First file is: %c \n",firstFilenameOpen);
+        // }
+        // if(secondFilenameOpen!=NULL)  printf("Second file is: %s \n",secondFilenameOpen);
+
+                //~~~~
     printf("\n");
   }
 return 0;
