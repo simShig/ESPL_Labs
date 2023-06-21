@@ -70,87 +70,7 @@ typedef struct {
 } SectionHeader;
 
 
-
-
-// Function to merge two ELF files
-void MergeELF(const char* file1, const char* file2, const char* output) {
-    // Open the input ELF files
-    FILE* elf1 = fopen(file1, "rb");
-    FILE* elf2 = fopen(file2, "rb");
-
-    // Create the output ELF file
-    FILE* mergedElf = fopen(output, "wb");
-
-    // Read the ELF header of the first file
-    ElfHeader header1;
-    fread(&header1, sizeof(ElfHeader), 1, elf1);
-
-    // Write the ELF header to the merged ELF file
-    fwrite(&header1, sizeof(ElfHeader), 1, mergedElf);
-
-    // Read the section header table of the first file
-    SectionHeader* sectionHeaders1 = (SectionHeader*)malloc(sizeof(SectionHeader) * header1.e_shnum);
-    fseek(elf1, header1.e_shoff, SEEK_SET);
-    fread(sectionHeaders1, sizeof(SectionHeader), header1.e_shnum, elf1);
-
-    // Loop over the section headers and process each section
-    for (int i = 0; i < header1.e_shnum; i++) {
-        SectionHeader sectionHeader = sectionHeaders1[i];
-
-        // Concatenate .text, .data, .rodata sections from both files
-        if (strcmp(".text", (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0 ||
-            strcmp(".data", (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0 ||
-            strcmp(".rodata", (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0) {
-
-            // Write the section contents from the first file
-            fseek(elf1, sectionHeader.sh_offset, SEEK_SET);
-            for (int j = 0; j < sectionHeader.sh_size; j++) {
-                fputc(fgetc(elf1), mergedElf);
-            }
-
-            // Find the corresponding section in the second file
-            SectionHeader sectionHeader2;
-            for (int j = 0; j < header1.e_shnum; j++) {
-                if (strcmp((char*)(sectionHeaders1 + sectionHeaders1[j].sh_name),
-                           (char*)(sectionHeaders1 + sectionHeader.sh_name)) == 0) {
-                    sectionHeader2 = sectionHeaders1[j];
-                    break;
-                }
-            }
-
-            // Write the section contents from the second file
-            fseek(elf2, sectionHeader2.sh_offset, SEEK_SET);
-            for (int j = 0; j < sectionHeader2.sh_size; j++) {
-                fputc(fgetc(elf2), mergedElf);
-            }
-
-            // Update the section header size
-            sectionHeader.sh_size += sectionHeader2.sh_size;
-        }
-
-        // Write the modified section header to the merged ELF file
-        fseek(mergedElf, header1.e_shoff + (sizeof(SectionHeader) * i), SEEK_SET);
-        fwrite(&sectionHeader, sizeof(SectionHeader), 1, mergedElf);
-    }
-
-    // Close the input ELF files
-    fclose(elf1);
-    fclose(elf2);
-
-    // Update the e_shoff field in the ELF header
-    fseek(mergedElf, offsetof(ElfHeader, e_shoff), SEEK_SET); ///gpt wrote this line, what do i need to write instead of "offsetof(ElfHeader, e_shoff)"?
-    fwrite(&header1.e_shoff, sizeof(unsigned long), 1, mergedElf);
-
-    // Close the merged ELF file
-    fclose(mergedElf);
-
-    // Free the allocated memory
-    free(sectionHeaders1);
-}
-
-
-
-int menu_size = 6;
+int menu_size = 7;
 int debug = 0;
 
 int FirstFd = -1;
@@ -231,6 +151,7 @@ int LoadFile(int fileNum){
    }
 
 }
+//DEBUGMODE:
 
 void toggleDebugMode(){
     if (debug == 0) {
@@ -258,11 +179,13 @@ char* dataType(Elf32_Ehdr* header){
         break;
     }
 }
+
+//EXAMINE ELF:
+
 void examineFile(){
     if (FirstFd==-1){               //first file examine
         printf("Enter first file name: ");
         if(LoadFile(1)==-1){
-            // printf("Loading of file: %s Failed!\n",firstFilenameOpen);
             exit(1);
         }
         header = (Elf32_Ehdr *) mapLocationFirst;
@@ -289,7 +212,6 @@ void examineFile(){
     if (SecondFd==-1){               //first file examine
         printf("Enter Second file name: ");
         if(LoadFile(2)==-1){
-            // printf("Loading of file: %s Failed!\n",secondFilenameOpen);
             exit(1);
         }
         header = (Elf32_Ehdr *) mapLocationSecond;
@@ -317,6 +239,7 @@ void examineFile(){
     printf("Error - failed open atempt: there are two opened files already\n");
     return;
 }
+//PRINT SECTIONS:
 
 char* sectionType(int value) {
     switch (value) {
@@ -382,6 +305,8 @@ void printSectionNames(){
   	}
 }
 
+//PRINT SYMBOLSS:
+
 void printSymbols(){
     if (FirstFd == -1){
         perror("No file open!");
@@ -395,6 +320,8 @@ void printSymbols(){
         }
         else {
             int entry_num = symbol_table_entry->sh_size / sizeof(Elf32_Sym);
+            fprintf(stderr,"File %s :\n",filename1);  ///filename
+
             if(debug){
                 printf("[Num]\tValue\t\tsection_index\tsection_name\t\tsymbol_name\t\tsize\n");
             }
@@ -427,49 +354,222 @@ void printSymbols(){
             
         }
     }
-}
+    //second:
+    if (SecondFd!=-1){
+        Elf32_Shdr *symbol_table_entry = getTable(".symtab");
+        Elf32_Shdr *strtab = getTable(".strtab");       //get the entry of "name" --> symbol name
+        Elf32_Shdr *shstrtab = getTable(".shstrtab");   // --> section name
+        if (symbol_table_entry == NULL){
+            perror("Symbol table not found!");
+        }
+        else {
+            int entry_num = symbol_table_entry->sh_size / sizeof(Elf32_Sym);
+            fprintf(stderr,"File %s :\n",filename2);  ///filename
 
-void printRelTable(char* table_name, Elf32_Shdr* table_entry){
-    Elf32_Shdr *dynsym = getTable(".dynsym");
-    Elf32_Shdr *dynstr = getTable(".dynstr");
+            if(debug){
+                printf("[Num]\tValue\t\tsection_index\tsection_name\t\tsymbol_name\t\tsize\n");
+            }
+            else{
+                printf("[Num]\tValue\t\tsection_index\tsection_name\t\tsymbol_name\n");
+            }
+            for (int i = 0; i < entry_num; i++)
+            {
+                Elf32_Sym *symb_entry = mapLocationSecond + symbol_table_entry->sh_offset + (i * sizeof(Elf32_Sym));
+                char *section_name;
+                if (symb_entry->st_shndx == 0xFFF1) { section_name = "ABS";}
+                else if (symb_entry->st_shndx == 0x0) { section_name = "UND";}
+                else {
+                    Elf32_Shdr *section_entry = mapLocationSecond + header->e_shoff + (symb_entry->st_shndx * header->e_shentsize);
+                    section_name = mapLocationSecond + shstrtab->sh_offset + section_entry->sh_name;
+                }
 
-    printf("Relocation section '%s' at offset %#x contains %d entries:\n",
-            table_name,table_entry->sh_offset,table_entry->sh_size/sizeof(Elf32_Rel));
-    printf(" Offset\t\t  Info\t   Type\t   Sym.Value\tSym.Name\n");
-    for(int i=0; i<table_entry->sh_size/sizeof(Elf32_Rel);i++){
-        Elf32_Rel* rel_entry = mapLocationFirst+table_entry->sh_offset+(i*sizeof(Elf32_Rel));
-        int type = ELF32_R_TYPE(rel_entry->r_info);
-        int symbol_table_index = ELF32_R_SYM(rel_entry->r_info);
-        Elf32_Sym* symbol_entry = mapLocationFirst+dynsym->sh_offset+(symbol_table_index*sizeof(Elf32_Sym));
-        int value = symbol_entry->st_value;
-        char* symbol_name = mapLocationFirst+dynstr->sh_offset+symbol_entry->st_name;
-        printf("%08x\t%08x    %d\t   %08x\t%s\n",
-            rel_entry->r_offset, rel_entry->r_info,type,value,symbol_name);
+                char *symb_name = mapLocationSecond + strtab->sh_offset + symb_entry->st_name;
+                char *symb_size = mapLocationSecond + strtab->sh_offset + symb_entry->st_size;
+
+                if (debug){
+                    printf("[%2d]\t%#09x\t%d\t\t%-13.20s\t\t\%-20.30s\t\t%-20.30s\n",
+                    i, symb_entry->st_value, symb_entry->st_shndx, section_name,symb_name,symb_size);
+                }
+                else {
+                    printf("[%2d]\t%#09x\t%d\t\t%-13.20s\t\t\%-20.30s\n",
+                        i, symb_entry->st_value, symb_entry->st_shndx, section_name,symb_name);
+                }
+            }
+            
+        }
     }
-    printf("\n");
+
 }
 
-void relocationTables(){
-    if(FirstFd == -1) {
-        perror("No file open!");
-    }else {
-        Elf32_Shdr *rel_dyn_entry = getTable(".rel.dyn");
-        Elf32_Shdr *rel_plt_entry = getTable(".rel.plt");
-        
-        if (rel_dyn_entry != NULL) { printRelTable(".rel.dyn", rel_dyn_entry); }
-        if (rel_plt_entry != NULL) { printRelTable(".rel.plt", rel_plt_entry); }
-    } 
-}
+// QUIT:
 
 void quit(){ //eden-should close whats open and wxit normally
     if (debug) { printf("quitting\n");}
+    if (FirstFd!=-1) close(FirstFd);
+    if (SecondFd!=-1) close(SecondFd);
     exit(0);
 }
 
+
+//CHECK BEFORE MERGE:
+
+Elf32_Sym* get_symbol(Elf32_Sym* symbols, char* strtab, int symbols_size, char* name){
+  if(strcmp(name, "") == 0){
+    return NULL;
+  }
+  for(int i = 1; i < symbols_size; i++){
+    if(strcmp(name, &strtab[symbols[i].st_name]) == 0){
+      return symbols + i;
+    }
+  }
+  return NULL;
+}
+
+Elf32_Shdr* extractSection(Elf32_Shdr* sections, char* shstrtab, int sections_size, char* name){
+  for(int i = 1; i < sections_size; i++){
+    if(strcmp(name, &shstrtab[sections[i].sh_name]) == 0){
+      return sections + i;
+    }
+  }
+  return NULL;
+}
+
+int fieldsArrange(void* map_start, Elf32_Ehdr** header, Elf32_Shdr** shdr, Elf32_Sym** symbols, char** shstrtab, char** strtab, int* symbol_size){
+  int counter = 0;
+  *header = (Elf32_Ehdr*) map_start;
+  *shdr = (Elf32_Shdr*) (map_start + (*header)->e_shoff);
+  *shstrtab = (char*) (map_start + (*shdr)[(*header)->e_shstrndx].sh_offset);
+  for(int i = 0; i < (*header)->e_shnum; i++){
+    if((*shdr)[i].sh_type == SHT_SYMTAB || (*shdr)[i].sh_type == SHT_DYNSYM){
+      counter++;
+      *symbols = (Elf32_Sym*) (map_start + (*shdr)[i].sh_offset);
+      *strtab = (char*)(map_start + (*shdr)[(*shdr)[i].sh_link].sh_offset);
+      *symbol_size = (*shdr)[i].sh_size / (*shdr)[i].sh_entsize;  
+    }
+  }
+  if (counter==1) return 1; //true
+  else return 0;    //false
+//   return (counter == 1);
+}
+
+void CheckMerge(){
+  //there are two files
+  if(FirstFd==-1||SecondFd==-1){
+    printf("there are no two files to merge\n");
+    return;
+  }
+  int symbol_size1, symbol_size2;
+  char* shstrtab1, *shstrtab2;
+  char* strtab1, *strtab2;
+  Elf32_Ehdr* header1, *header2;
+  Elf32_Sym* symbols1, *symbols2;
+  Elf32_Shdr* shdr1, *shdr2;
+  
+  if(fieldsArrange(mapLocationFirst, &header1, &shdr1, &symbols1, &shstrtab1, &strtab1, &symbol_size1) == 0){
+    printf("feature not supported\n");
+    return;
+  }
+  if(fieldsArrange(mapLocationSecond, &header2, &shdr2, &symbols2, &shstrtab2, &strtab2, &symbol_size2) == 0){
+    printf("feature not supported\n");
+    return;
+  }
+printf("File %s :\n",filename1);        //filename header
+
+  for(int i = 1; i < symbol_size1; i++){
+    Elf32_Sym* symbol = get_symbol(symbols2, strtab2, symbol_size2, &strtab1[symbols1[i].st_name]);
+    if(symbols1[i].st_shndx == SHN_UNDEF){
+      if(symbol == NULL || symbol->st_shndx == SHN_UNDEF){
+        printf("Sym %s is undefined\n", &strtab1[symbols1[i].st_name]);
+      }
+    } else {
+      if(symbol != NULL && symbol->st_shndx != SHN_UNDEF){
+        printf("Sym %s is multiply defined\n", &strtab1[symbols1[i].st_name]);
+      }
+    }
+  }
+  
+  printf("\nFile %s :\n",filename2);        //filename header
+
+  for(int i = 1; i < symbol_size2; i++){
+    Elf32_Sym* symbol = get_symbol(symbols1, strtab1, symbol_size1, &strtab2[symbols2[i].st_name]);
+    if(symbols2[i].st_shndx == SHN_UNDEF){
+      if(symbol == NULL || symbol->st_shndx == SHN_UNDEF){
+        printf("Sym %s is undefined\n", &strtab2[symbols2[i].st_name]);
+      }
+    } else {
+      if(symbol != NULL && symbol->st_shndx != SHN_UNDEF){
+        printf("Sym %s is multiply defined\n", &strtab2[symbols2[i].st_name]);
+      }
+    }
+  }
+}
+
+
+
+
+//MERGE:
+
+void MergeElfFiles(){
+  //there are two files
+  if(FirstFd==-1||SecondFd==-1){
+    printf("there are no two files for merging\n");
+    return;
+  }
+  Elf32_Ehdr* header1, *header2;
+  Elf32_Shdr* shdr1, *shdr2;
+  Elf32_Sym* symbols1, *symbols2;
+  char* shstrtab1, *shstrtab2;
+  char* strtab1, *strtab2;
+  int symbol_size1, symbol_size2;
+  
+  if(fieldsArrange(mapLocationFirst, &header1, &shdr1, &symbols1, &shstrtab1, &strtab1, &symbol_size1) == 0){
+    printf("Error: Format not supported!\n");
+    return;
+  }
+  if(fieldsArrange(mapLocationSecond, &header2, &shdr2, &symbols2, &shstrtab2, &strtab2, &symbol_size2) == 0){
+    printf("Error: Format not supported!\n");
+    return;
+  }
+
+  FILE* file = fopen("out.ro", "wb");
+  fwrite((char*) header1, 1, header1->e_ehsize, file);
+  Elf32_Shdr copy_shdr[header1->e_shnum];
+  memcpy((char*) copy_shdr, (char*)shdr1, header1->e_shnum * header1->e_shentsize);
+  for(int i = 1; i < header1->e_shnum; i++){
+    copy_shdr[i].sh_offset = ftell(file);
+    if(strcmp(&shstrtab1[shdr1[i].sh_name], ".text") == 0 || strcmp(&shstrtab1[shdr1[i].sh_name], ".data") == 0 || strcmp(&shstrtab1[shdr1[i].sh_name], ".rodata") == 0){
+      fwrite((char*)(mapLocationFirst + shdr1[i].sh_offset), 1, shdr1[i].sh_size, file);
+      Elf32_Shdr* section = extractSection(shdr2, shstrtab2, header2->e_shnum, &shstrtab1[shdr1[i].sh_name]);
+      if(section != NULL){
+        fwrite((char*)(mapLocationSecond + section->sh_offset), 1, section->sh_size, file);
+        copy_shdr[i].sh_size = shdr1[i].sh_size + section->sh_size;
+      }
+    } else if(strcmp(&shstrtab1[shdr1[i].sh_name], ".symtab") == 0 ){
+        Elf32_Sym copy_sym[symbol_size1];
+        memcpy((char*) copy_sym, (char*)symbols1, shdr1[i].sh_size);
+        for(int j = 1; j < symbol_size1; j++){
+          if(symbols1[j].st_shndx == SHN_UNDEF){
+            Elf32_Sym* symbol = get_symbol(symbols2, strtab2, symbol_size2, &strtab1[symbols1[j].st_name]);
+            copy_sym[j].st_value = symbol->st_value;
+            Elf32_Shdr* section = extractSection(shdr1, shstrtab1, header1->e_shnum, &shstrtab2[shdr2[symbol->st_shndx].sh_name]);
+            copy_sym[j].st_shndx = section - shdr1;
+          }
+        }
+        fwrite((char*) copy_sym, 1, shdr1[i].sh_size, file);
+    } else {
+      fwrite((char*)(mapLocationFirst + shdr1[i].sh_offset), 1, shdr1[i].sh_size, file);
+    }
+  }
+  int offset = ftell(file);
+  fwrite((char*) copy_shdr, 1, header1->e_shnum * header1->e_shentsize, file);
+  fseek(file, 32, SEEK_SET); //32 is the offset for e_shoff
+  fwrite((char*) (&offset), 1, sizeof(int), file);
+  fclose(file);
+}
+
+
 void printMenu (fun_desc menu[]){
-	// if(firstFilenameOpen!=NULL /*strcmp(firstFilenameOpen,"")!=0*/){
-	//     fprintf(stdout,"Current File Open: %s\n",&firstFilenameOpen);
-	// }
+
     printf("Please choose a function:\n");
     for(int i = 0; i < menu_size; i++)
         printf("%d) %s\n", i, menu[i].name);
@@ -488,81 +588,19 @@ int getOption (){
     return -1;
   }
 }
-///eden added:
-// Function to check for symbol merge errors
-void CheckMerge(SymbolTable SYMTAB1, SymbolTable SYMTAB2) {
-    // Check if symbol tables are available
-    if (SYMTAB1.symbols == NULL || SYMTAB2.symbols == NULL) {
-        printf("Error: ELF files not opened and mapped.\n");
-        return;
-    }
-      // Check if there is exactly one symbol table in each ELF file
-    if (SYMTAB1.num_symbols != 1 || SYMTAB2.num_symbols != 1) {
-        printf("Feature not supported: Multiple symbol tables found.\n");
-        return;
-    }
-    Symbol* symbols1 = SYMTAB1.symbols;  // Symbols of SYMTAB1
-    Symbol* symbols2 = SYMTAB2.symbols;  // Symbols of SYMTAB2
 
-    // Loop over symbols in SYMTAB1
-    for (int i = 1; i < SYMTAB1.num_symbols; i++) {
-        Symbol sym = symbols1[i];
-
-        // Check if sym is UNDEFINED
-        if (sym.is_undefined) {
-            bool found_sym = false;
- // Search for sym in SYMTAB2
-            for (int j = 1; j < SYMTAB2.num_symbols; j++) {
-                if (strcmp(sym.name, symbols2[j].name) == 0) {
-                    found_sym = true;
-
-                    // Check if sym is also UNDEFINED in SYMTAB2
-                    if (symbols2[j].is_undefined) {
-                        printf("Symbol %s undefined\n", sym.name);
-                    }
-                    break;
-                }
-            }
-             // Check if sym is not found in SYMTAB2
-            if (!found_sym) {
-                printf("Symbol %s undefined\n", sym.name);
-            }
-        }
-          // Check if sym is defined
-        else if (sym.is_defined) {
-            // Search for sym in SYMTAB2
-            for (int j = 1; j < SYMTAB2.num_symbols; j++) {
-                if (strcmp(sym.name, symbols2[j].name) == 0) {
-                    // Check if sym is also defined in SYMTAB2
-                    if (symbols2[j].is_defined) {
-                        printf("Symbol %s multiply defined\n", sym.name);
-                    }
-                    break;
-                }
-            }
-        }
-    }
-}
 
 int main(int argc, char **argv){
   fun_desc menu[] = {{"Toggle Debug Mode",toggleDebugMode},{"Examine ELF File",examineFile},
                     {"Print Section Names",printSectionNames},{"Print Symbols",printSymbols},
-                    {"Relocation Tables",relocationTables},{"Quit",quit}};
+                    {"Check Files for Merge", CheckMerge},{"Merge ELF Files", MergeElfFiles},
+                    {"Quit",quit}};
   size_t index=0;
   while (menu[index].name != NULL){index = index +1; }
   while (1) {
     printMenu(menu);
     int option = getOption();
     if (option != -1) { menu[option].fun(); }
-                //for debugging:
-                
-        // if(firstFilenameOpen!=NULL){
-        //     printf("check check \n");
-        //     printf("First file is: %c \n",firstFilenameOpen);
-        // }
-        // if(secondFilenameOpen!=NULL)  printf("Second file is: %s \n",secondFilenameOpen);
-
-                //~~~~
     printf("\n");
   }
 return 0;
